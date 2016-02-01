@@ -56,7 +56,6 @@ class Storage(AwsStorage, BaseStorage):
                 result.successful = True
                 result.metadata   = key.copy()
                 result.metadata.pop('Body')
-                result.metadata['LastModified'] = self._utc_to_local(result.metadata['LastModified'])
 
                 logger.debug(str(result.metadata))
 
