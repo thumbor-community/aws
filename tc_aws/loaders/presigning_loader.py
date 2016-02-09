@@ -20,7 +20,7 @@ def _generate_presigned_url(context, bucket, key, callback):
     :param string key: Path to get URL for
     :param callable callback: Callback method once done
     """
-    Bucket(bucket, context.config.get('TC_AWS_REGION')).get_url(key, callback=callback)
+    Bucket(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_PRIVATE_HOST')).get_url(key, callback=callback)
 
 
 @return_future
