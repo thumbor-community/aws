@@ -29,7 +29,7 @@ def load(context, url, callback):
     bucket, key = _get_bucket_and_key(context, url)
 
     if _validate_bucket(context, bucket):
-        bucket_loader = Bucket(bucket, context.config.get('TC_AWS_REGION'))
+        bucket_loader = Bucket(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_PRIVATE_HOST'))
 
         def handle_data(file_key):
             if not file_key or 'Error' in file_key or 'Body' not in file_key:

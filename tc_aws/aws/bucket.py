@@ -7,6 +7,7 @@
 import session as session_handler
 from tornado_botocore import Botocore
 from tornado.concurrent import return_future
+from botocore.utils import fix_s3_host
 from thumbor.utils import logger
 
 
@@ -14,19 +15,22 @@ class Bucket(object):
     """
     This handles all communication with AWS API
     """
-    _bucket      = None
-    _region      = None
-    _local_cache = dict()
+    _bucket       = None
+    _region       = None
+    _private_host = None
+    _local_cache  = dict()
 
-    def __init__(self, bucket, region):
+    def __init__(self, bucket, region, private_host):
         """
         Constructor
         :param string bucket: The bucket name
         :param string region: The AWS API region to use
+        :param string private_host: The AWS API VPC host to use
         :return: The created bucket
         """
         self._bucket = bucket
         self._region = region
+        self._private_host = private_host
 
     @return_future
     def get(self, path, callback=None):
@@ -54,7 +58,11 @@ class Bucket(object):
         :param callable callback: Called function once done
         """
         session = session_handler.get_session()
-        client  = session.create_client('s3', region_name=self._region)
+        if self._private_host:
+            client = session.create_client('s3', region_name=self._region, endpoint_url=self._private_host)
+            client.meta.events.unregister('before-sign.s3', fix_s3_host)
+        else:
+            client = session.create_client('s3', region_name=self._region)
 
         url = client.generate_presigned_url(
             ClientMethod='get_object',

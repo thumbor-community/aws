@@ -8,6 +8,8 @@ from thumbor.config import Config
 
 Config.define('TC_AWS_REGION',                    'eu-west-1', 'S3 region', 'S3')
 
+Config.define('TC_AWS_PRIVATE_HOST',               None,       'S3 host in VPC', 'S3')
+
 Config.define('TC_AWS_STORAGE_BUCKET',             None,       'S3 bucket for Storage', 'S3')
 Config.define('TC_AWS_STORAGE_ROOT_PATH',          '',         'S3 path prefix for Storage bucket', 'S3')
 

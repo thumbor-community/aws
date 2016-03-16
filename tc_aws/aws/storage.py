@@ -34,7 +34,7 @@ class AwsStorage():
         :return: The bucket
         :rtype: Bucket
         """
-        return Bucket(self._get_config('BUCKET'), self.context.config.get('TC_AWS_REGION'))
+        return Bucket(self._get_config('BUCKET'), self.context.config.get('TC_AWS_REGION'), self.context.config.get('TC_AWS_PRIVATE_HOST'))
 
     def __init__(self, context, config_prefix):
         """
