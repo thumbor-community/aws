@@ -99,3 +99,25 @@ class PresigningLoaderVows(Vows.Context):
             expect(url_params).to_include('Signature')
             # expect(url_params['AWSAccessKeyId'][0]).to_equal('test-key')
             # expect(url_params['x-amz-security-token'][0]).to_equal('test-session-token')
+
+    class CanBuildPresignedUrlWithConfig(Vows.Context):
+
+        @Vows.async_topic
+        @mock_s3
+        def topic(self, callback):
+            conf = Config(TC_AWS_ENDPOINT_URL='http://test.example.com:9000', TC_AWS_CONFIG={'s3':{'addressing_style': 'path'},'signature_version':'s3v4'})
+            context = Context(config=conf)
+            presigning_loader._generate_presigned_url(context, "bucket-name", "some-s3-key", callback)
+
+        def should_generate_presigned_urls(self, topic):
+            url = urlparse(topic.args[0])
+            expect(url.scheme).to_equal('http')
+            expect(url.hostname).to_equal('test.example.com')
+            expect(url.port).to_equal(9000)
+            expect(url.path).to_equal('/bucket-name/some-s3-key')
+            url_params = parse_qs(url.query)
+            # We can't test Expires & Signature values as they vary depending on the TZ
+            expect(url_params).to_include('X-Amz-Algorithm')
+            expect(url_params).to_include('X-Amz-Signature')
+            # expect(url_params['AWSAccessKeyId'][0]).to_equal('test-key')
+            # expect(url_params['x-amz-security-token'][0]).to_equal('test-session-token')

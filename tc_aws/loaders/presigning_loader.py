@@ -4,6 +4,7 @@ from tornado.concurrent import return_future
 
 import thumbor.loaders.http_loader as http_loader
 import botocore.session
+from botocore.client import Config
 
 import urllib2
 
@@ -32,7 +33,7 @@ def load(context, url, callback):
 
 
 @return_future
-def get_url(bucket, region, path, method='GET', expiry=3600, callback=None):
+def get_url(bucket, region, path, config=None, endpoint_url=None, method='GET', expiry=3600, callback=None):
     """
     Generates the presigned url for given key & methods
     :param string path: Path or 'key' for requested object
@@ -41,7 +42,11 @@ def get_url(bucket, region, path, method='GET', expiry=3600, callback=None):
     :param callable callback: Called function once done
     """
     session = botocore.session.get_session()
-    client  = session.create_client('s3', region_name=region)
+
+    if config is not None:
+      config = Config(**config)
+
+    client  = session.create_client('s3', region_name=region, endpoint_url=endpoint_url, config=config)
 
     url = client.generate_presigned_url(
         ClientMethod='get_object',
@@ -64,7 +69,7 @@ def _generate_presigned_url(context, bucket, key, callback):
     :param string key: Path to get URL for
     :param callable callback: Callback method once done
     """
-    get_url(bucket, context.config.get('TC_AWS_REGION'), key, callback=callback)
+    get_url(bucket, context.config.get('TC_AWS_REGION'), key, config=context.config.get('TC_AWS_CONFIG'), endpoint_url=context.config.get('TC_AWS_ENDPOINT_URL'), callback=callback)
 
 def _clean_key(path):
     key = path
