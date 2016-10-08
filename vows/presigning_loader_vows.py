@@ -86,10 +86,7 @@ class PresigningLoaderVows(Vows.Context):
         def topic(self, callback):
             conf = Config()
             context = Context(config=conf)
-            try:
-                presigning_loader._generate_presigned_url(context, "bucket-name", "some-s3-key", callback)
-            except TypeError as err:
-                print("OS error: {0}".format(err))
+            presigning_loader._generate_presigned_url(context, "bucket-name", "some-s3-key", callback)
 
         def should_generate_presigned_urls(self, topic):
             url = urlparse(topic.args[0])
