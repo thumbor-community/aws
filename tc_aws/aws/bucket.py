@@ -8,6 +8,7 @@ import session as session_handler
 from tornado_botocore import Botocore
 from tornado.concurrent import return_future
 from thumbor.utils import logger
+from thumbor.engines import BaseEngine
 
 
 class Bucket(object):
@@ -85,12 +86,14 @@ class Bucket(object):
         :param callable callback: Called function once done
         """
         storage_class = 'REDUCED_REDUNDANCY' if reduced_redundancy else 'STANDARD'
+        content_type = BaseEngine.get_mimetype(data) or 'application/octet-stream'
 
         args = dict(
             callback=callback,
             Bucket=self._bucket,
             Key=self._clean_key(path),
             Body=data,
+            ContentType=content_type,
             Metadata=metadata,
             StorageClass=storage_class,
         )
