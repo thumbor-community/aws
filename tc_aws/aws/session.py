@@ -8,9 +8,9 @@ session = None
 def get_session(custom_endpoint=False):
     '''
     Return a session object
-    
+
     :param bool custom_endpoint: If true, prevent boto fiddling with the hostname
-    :return: The session
+    :return Session: The session
     '''
     global session
     if session is None:

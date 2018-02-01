@@ -11,7 +11,7 @@ from thumbor.config import Config
 from fixtures.storage_fixture import IMAGE_URL, IMAGE_BYTES, get_server
 
 from boto.s3.connection import S3Connection
-from moto import mock_s3
+from moto import mock_s3_deprecated as mock_s3
 
 from tc_aws.storages.s3_storage import Storage
 

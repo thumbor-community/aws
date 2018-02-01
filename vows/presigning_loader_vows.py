@@ -14,7 +14,7 @@ from derpconf.config import Config
 import boto
 from boto.s3.key import Key
 
-from moto import mock_s3
+from moto import mock_s3_deprecated as mock_s3
 
 from fixtures.storage_fixture import IMAGE_PATH, IMAGE_BYTES
 

@@ -10,7 +10,7 @@ from tc_aws import Config
 from fixtures.storage_fixture import IMAGE_BYTES, get_server
 
 from boto.s3.connection import S3Connection
-from moto import mock_s3
+from moto import mock_s3_deprecated as mock_s3
 
 from tc_aws.result_storages.s3_storage import Storage
 
@@ -44,7 +44,7 @@ class S3ResultStorageVows(Vows.Context):
             storage.put(IMAGE_BYTES, callback=callback)
 
         def should_be_in_catalog(self, topic):
-            expect(topic).to_equal('my-image.jpg')
+            expect(topic.args[0]).to_equal('my-image.jpg')
 
     class CanGetImage(Vows.Context):
         @Vows.async_topic
