@@ -115,6 +115,12 @@ TC_AWS_MAX_RETRY=0 # Max retries for get image from S3 Bucket. Default is 0
 TC_AWS_STORE_METADATA=False # Store result with metadata (for instance content-type)
 ```
 
+### Optimization settings
+
+```.ini
+TC_AWS_RANDOMIZE_KEYS=False # Adds some randomization in the S3 keys for the Storage and Result Storage. Defaults to False for Backwards Compatibility, set it to True for performance.
+```
+
 ## Troubleshooting
 
 ### Check your configuration
