@@ -5,7 +5,7 @@
 # found in the LICENSE file.
 
 import session as session_handler
-from tornado_botocore import Botocore
+from tornado_botocore.base import Botocore
 from tornado.concurrent import return_future
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
