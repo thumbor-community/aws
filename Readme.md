@@ -117,6 +117,10 @@ TC_AWS_STORE_METADATA=False # Store result with metadata (for instance content-t
 
 ## Troubleshooting
 
+### Check your configuration
+
+You may have errors due to unproperly formatted configuration. For instance, if you've set the value "None" or "", this will default to the string value, and not the False or None value exepected, which can lead to issues later on. So if you're running into issues, try to re-read the configuration, taking care of the formatting.
+
 ### Make it work with riak
 
 You'll need to tweak a bit your aws configuration (see boto doc), which should in the end look as follows:
