@@ -8,6 +8,7 @@ from json import loads, dumps
 from os.path import join, splitext
 from datetime import datetime
 from dateutil.tz import tzutc
+from hashlib import sha1
 
 from tornado.concurrent import return_future
 from thumbor.utils import logger
@@ -265,4 +266,13 @@ class AwsStorage():
         if self.is_auto_webp:
             path_segments.append("webp")
 
+        if self._should_randomize_key():
+            path_segments.insert(0, self._generate_digest(path_segments))
+
         return join(path_segments[0], *path_segments[1:]).lstrip('/') if len(path_segments) > 1 else path_segments[0]
+
+    def _should_randomize_key(self):
+        return self.context.config.TC_AWS_RANDOMIZE_KEYS
+
+    def _generate_digest(self, segments):
+        return sha1(".".join(segments).encode('utf-8')).hexdigest()

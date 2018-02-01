@@ -2,6 +2,16 @@
 
 This file will describe the changes in each version, noticeable the BC Breaks that may have append
 
+## 6.2 - S3 Keys randomization
+
+You can now randomize the keys for the storages to improve performance. To do that, update the configuration:
+
+``TC_AWS_RANDOMIZE_KEYS=True``
+
+This is set to False by default to preserve backwards compatibility.
+
+**Warning**: enabling this option will result in re-generating all your cached files on your storages.
+
 ## 6.1 - Custom endpoint
 
 You can now specify a custom AWS API endpoint by setting this in the configuration:
