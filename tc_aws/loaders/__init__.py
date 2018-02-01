@@ -7,6 +7,7 @@
 __all__ = ['_get_bucket_and_key', '_get_bucket', '_get_key', '_validate_bucket', '_use_http_loader']
 
 import urllib2
+import thumbor.loaders.http_loader as http_loader
 
 def _get_bucket_and_key(context, url):
     """
@@ -70,3 +71,10 @@ def _use_http_loader(context, url):
     """
     enable_http_loader = context.config.get('TC_AWS_ENABLE_HTTP_LOADER', default=False)
     return enable_http_loader and url.startswith('http')
+
+def _validate(context, url, normalize_url_func):
+    if _use_http_loader(context, url):
+        return http_loader.validate(context, url, normalize_url_func=http_loader._normalize_url)
+
+    bucket, key = _get_bucket_and_key(context, url)
+    return _validate_bucket(context, bucket)

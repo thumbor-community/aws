@@ -4,15 +4,17 @@
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
 
+import thumbor.loaders.http_loader as http_loader
 from thumbor.utils import logger
 from thumbor.loaders import LoaderResult
-from tornado.concurrent import return_future
 
-import thumbor.loaders.http_loader as http_loader
+from tornado.concurrent import return_future
 
 from . import *
 from ..aws.bucket import Bucket
 
+def validate(context, url, normalize_url_func):
+    return _validate(context, url, normalize_url_func)
 
 @return_future
 def load(context, url, callback):

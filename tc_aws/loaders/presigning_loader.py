@@ -11,6 +11,9 @@ import thumbor.loaders.http_loader as http_loader
 from . import *
 from ..aws.bucket import Bucket
 
+def validate(context, url, normalize_url_func):
+    return _validate(context, url, normalize_url_func)
+
 @return_future
 def _generate_presigned_url(context, bucket, key, callback):
     """
