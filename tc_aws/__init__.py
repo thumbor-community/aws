@@ -20,3 +20,4 @@ Config.define('TC_AWS_ALLOWED_BUCKETS', False, 'List of allowed buckets to be re
 Config.define('TC_AWS_STORE_METADATA', False, 'S3 store result with metadata', 'S3')
 Config.define('TC_AWS_ENDPOINT', None, 'Custom AWS API endpoint', 'S3')
 Config.define('TC_AWS_MAX_RETRY', 0, 'Max retries for get image from S3 bucket', 'S3')
+Config.define('TC_AWS_RANDOMIZE_KEYS', False, 'Should S3 keys be randomized? Defaults to False for BC, for performance, should be set to True', 'S3')

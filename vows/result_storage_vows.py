@@ -3,6 +3,8 @@
 from datetime import datetime, timedelta
 from dateutil.tz import tzutc
 
+from hashlib import sha1
+
 from pyvows import Vows, expect
 
 from thumbor.context import Context
@@ -46,6 +48,25 @@ class S3ResultStorageVows(Vows.Context):
         def should_be_in_catalog(self, topic):
             expect(topic.args[0]).to_equal('my-image.jpg')
 
+    class CanStoreImageRandomly(Vows.Context):
+        @Vows.async_topic
+        @mock_s3
+        def topic(self, callback):
+            self.conn = S3Connection()
+            self.conn.create_bucket(s3_bucket)
+
+            config = Config(TC_AWS_RESULT_STORAGE_BUCKET=s3_bucket, TC_AWS_RANDOMIZE_KEYS=True)
+            ctx = Context(config=config, server=get_server('ACME-SEC'))
+            ctx.request = Request
+            ctx.request.url = 'my-image.jpg'
+
+            storage = Storage(ctx)
+
+            storage.put(IMAGE_BYTES, callback=callback)
+
+        def should_be_in_catalog(self, topic):
+            expect(topic.args[0]).to_equal([sha1('my-image.jpg'.encode('utf8')).hexdigest(), 'my-image.jpg'].join('/'))
+
     class CanGetImage(Vows.Context):
         @Vows.async_topic
         @mock_s3
@@ -54,6 +75,28 @@ class S3ResultStorageVows(Vows.Context):
             self.conn.create_bucket(s3_bucket)
 
             config = Config(TC_AWS_RESULT_STORAGE_BUCKET=s3_bucket)
+            ctx = Context(config=config, server=get_server('ACME-SEC'))
+            ctx.request = Request
+            ctx.request.url = 'my-image-2.jpg'
+
+            storage = Storage(ctx)
+            storage.put(IMAGE_BYTES)
+
+            storage.get(callback=callback)
+
+        def should_have_proper_bytes(self, topic):
+            expect(topic.args[0]).not_to_be_null()
+            expect(topic.args[0]).not_to_be_an_error()
+            expect(topic.args[0]).to_equal(IMAGE_BYTES)
+
+    class CanGetRandomizedImage(Vows.Context):
+        @Vows.async_topic
+        @mock_s3
+        def topic(self, callback):
+            self.conn = S3Connection()
+            self.conn.create_bucket(s3_bucket)
+
+            config = Config(TC_AWS_RESULT_STORAGE_BUCKET=s3_bucket, TC_AWS_RANDOMIZE_KEYS=True)
             ctx = Context(config=config, server=get_server('ACME-SEC'))
             ctx.request = Request
             ctx.request.url = 'my-image-2.jpg'
