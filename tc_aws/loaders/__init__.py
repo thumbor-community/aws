@@ -4,7 +4,7 @@
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
 
-__all__ = ['_get_bucket_and_key', '_get_bucket', '_get_key', '_validate_bucket', '_use_http_loader']
+__all__ = ['_get_bucket_and_key', '_get_bucket', '_get_key', '_validate_bucket', '_use_http_loader', '_validate']
 
 import urllib2
 import thumbor.loaders.http_loader as http_loader
