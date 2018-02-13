@@ -13,7 +13,7 @@ from tornado.concurrent import return_future
 from . import *
 from ..aws.bucket import Bucket
 
-def validate(context, url, normalize_url_func):
+def validate(context, url, normalize_url_func=http_loader._normalize_url):
     return _validate(context, url, normalize_url_func)
 
 @return_future
