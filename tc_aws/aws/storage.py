@@ -269,7 +269,11 @@ class AwsStorage():
         if self._should_randomize_key():
             path_segments.insert(0, self._generate_digest(path_segments))
 
-        return join(path_segments[0], *path_segments[1:]).lstrip('/') if len(path_segments) > 1 else path_segments[0]
+        normalized_path = join(path_segments[0], *path_segments[1:]).lstrip('/') if len(path_segments) > 1 else path_segments[0]
+        if normalized_path.endswith('/'):
+            normalized_path += self.context.config.get('TC_AWS_ROOT_IMAGE_NAME', False)
+
+        return normalized_path
 
     def _should_randomize_key(self):
         return self.context.config.TC_AWS_RANDOMIZE_KEYS
