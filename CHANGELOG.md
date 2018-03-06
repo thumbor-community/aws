@@ -16,6 +16,10 @@ This is set to False by default to preserve backwards compatibility.
 
 A new option ``TC_AWS_ROOT_IMAGE_NAME`` is available in the configuration that allows to set a default name for images which URL ends with a trailing ``/``. By default, it is set to ``root_image`` but you can set it to whatever you'd like.
 
+### 6.2.3 - BC for root_image
+
+Option ``TC_AWS_ROOT_IMAGE_NAME`` has '' value by default for BC purposes.
+
 ## 6.1 - Custom endpoint
 
 You can now specify a custom AWS API endpoint by setting this in the configuration:

@@ -173,7 +173,7 @@ class S3StorageVows(Vows.Context):
 
     class ShouldNormalize(Vows.Context):
         def topic(self):
-            config = Config(TC_AWS_STORAGE_ROOT_PATH='')
+            config = Config(TC_AWS_STORAGE_ROOT_PATH='', TC_AWS_ROOT_IMAGE_NAME='root_image')
             return Storage(Context(config=config))
 
         def should_normalize_slash(self, topic):
