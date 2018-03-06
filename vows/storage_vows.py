@@ -178,6 +178,7 @@ class S3StorageVows(Vows.Context):
 
         def should_normalize_slash(self, topic):
             expect(topic._normalize_path('/test')).to_equal('test')
+            expect(topic._normalize_path('/test/')).to_equal('test/root_image')
             expect(topic._normalize_path('/test/image.png')).to_equal('test/image.png')
 
     class CryptoVows(Vows.Context):
