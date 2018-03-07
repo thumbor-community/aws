@@ -3,7 +3,7 @@
 
 from urlparse import urlparse, parse_qs
 
-from mock import Mock
+import os
 
 from pyvows import Vows, expect
 from mock import patch
@@ -84,6 +84,7 @@ class PresigningLoaderVows(Vows.Context):
         @Vows.async_topic
         @mock_s3
         def topic(self, callback):
+            os.environ['AWS_SHARED_CREDENTIALS_FILE'] = ''
             conf = Config()
             context = Context(config=conf)
             presigning_loader._generate_presigned_url(context, "bucket-name", "some-s3-key", callback)
