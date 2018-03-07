@@ -42,7 +42,7 @@ def load(context, url, callback):
     handle_data = HandleDataFunc.as_func(key,
                                          callback=callback,
                                          bucket_loader=bucket_loader,
-                                         context=context)
+                                         max_retry=context.config.get('TC_AWS_MAX_RETRY'))
 
     bucket_loader.get(key, callback=handle_data)
 
@@ -50,13 +50,12 @@ def load(context, url, callback):
 class HandleDataFunc(object):
 
     def __init__(self, key, callback=None,
-                 bucket_loader=None, context=None):
+                 bucket_loader=None, max_retry=0):
         self.key = key
         self.bucket_loader = bucket_loader
         self.callback = callback
-        self.context = context
-        self.limit_max_retries = context.config.get('TC_AWS_MAX_RETRIES')
-        self.max_retries_counter = 0
+        self.max_retry = max_retry
+        self.retries_counter = 0
 
     @classmethod
     def as_func(cls, *init_args, **init_kwargs):
@@ -75,7 +74,7 @@ class HandleDataFunc(object):
         return handle_data
 
     def __increment_retry_counter(self):
-        self.max_retries_counter = self.max_retries_counter + 1
+        self.retries_counter = self.retries_counter + 1
 
     def dispatch(self, file_key):
         """ Callback method for getObject from s3 """
@@ -103,7 +102,7 @@ class HandleDataFunc(object):
                 self.callback(result)
                 return
 
-            if self.max_retries_counter < self.limit_max_retries:
+            if self.retries_counter < self.max_retry:
                 self.__increment_retry_counter()
                 self.bucket_loader.get(self.key,
                                        callback=self.dispatch)
