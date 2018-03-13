@@ -4,7 +4,8 @@
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
 
-import session as session_handler
+import botocore.session
+from botocore.utils import fix_s3_host
 from tornado_botocore.base import Botocore
 from tornado.concurrent import return_future
 from thumbor.utils import logger
@@ -15,11 +16,6 @@ class Bucket(object):
     """
     This handles all communication with AWS API
     """
-    _bucket      = None
-    _region      = None
-    _endpoint    = None
-    _local_cache = dict()
-
     def __init__(self, bucket, region, endpoint):
         """
         Constructor
@@ -32,6 +28,46 @@ class Bucket(object):
         self._region = region
         self._endpoint = endpoint
 
+        self._session = None
+        self._get_client = None
+        self._put_client = None
+        self._delete_client = None
+
+    @property
+    def session(self):
+        if self._session is None:
+            self._session = botocore.session.get_session()
+            if self._endpoint is not None:
+                self._session.unregister('before-sign.s3', fix_s3_host)
+        return self._session
+
+    @property
+    def get_client(self):
+        if self._get_client is None:
+            self._get_client = Botocore(service='s3', region_name=self._region,
+                                        operation='GetObject', session=self.session,
+                                        endpoint_url=self._endpoint)
+
+        return self._get_client
+
+    @property
+    def put_client(self):
+        if self._put_client is None:
+            self._put_client = Botocore(service='s3', region_name=self._region,
+                                        operation='PutObject', session=self.session,
+                                        endpoint_url=self._endpoint)
+
+        return self._put_client
+
+    @property
+    def delete_client(self):
+        if self._delete_client is None:
+            self._delete_client = Botocore(service='s3', region_name=self._region,
+                                           operation='DeleteObject', session=self.session,
+                                           endpoint_url=self._endpoint)
+
+        return self._delete_client
+
     @return_future
     def get(self, path, callback=None):
         """
@@ -39,11 +75,7 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         :param callable callback: Callback function for once the retrieval is done
         """
-        my_session = session_handler.get_session(self._endpoint is not None)
-        session = Botocore(service='s3', region_name=self._region,
-                           operation='GetObject', session=my_session,
-                           endpoint_url=self._endpoint)
-        session.call(
+        self.get_client.call(
             callback=callback,
             Bucket=self._bucket,
             Key=self._clean_key(path),
@@ -58,9 +90,7 @@ class Bucket(object):
         :param int expiry: URL validity time
         :param callable callback: Called function once done
         """
-        session = session_handler.get_session(self._endpoint is not None)
-        client  = session.create_client('s3', region_name=self._region,
-                                        endpoint_url=self._endpoint)
+        client = self.session.create_client('s3', region_name=self._region, endpoint_url=self._endpoint)
 
         url = client.generate_presigned_url(
             ClientMethod='get_object',
@@ -101,12 +131,7 @@ class Bucket(object):
         if encrypt_key:
             args['ServerSideEncryption'] = 'AES256'
 
-        my_session = session_handler.get_session(self._endpoint is not None)
-        session = Botocore(service='s3', region_name=self._region,
-                           operation='PutObject', session=my_session,
-                           endpoint_url=self._endpoint)
-
-        session.call(**args)
+        self.put_client.call(**args)
 
     @return_future
     def delete(self, path, callback=None):
@@ -115,11 +140,7 @@ class Bucket(object):
         :param string path: Path or 'key' to delete
         :param callable callback: Called function once done
         """
-        my_session = session_handler.get_session(self._endpoint is not None)
-        session = Botocore(service='s3', region_name=self._region,
-                           operation='DeleteObject', session=my_session,
-                           endpoint_url=self._endpoint)
-        session.call(
+        self.put_client.call(
             callback=callback,
             Bucket=self._bucket,
             Key=self._clean_key(path),

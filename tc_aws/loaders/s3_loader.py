@@ -36,15 +36,13 @@ def load(context, url, callback):
         callback(result)
         return
 
-    bucket_loader = Bucket(bucket, context.config.get('TC_AWS_REGION'),
-                           context.config.get('TC_AWS_ENDPOINT'))
-
+    loader = get_bucket_loader(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_ENDPOINT'))
     handle_data = HandleDataFunc.as_func(key,
                                          callback=callback,
-                                         bucket_loader=bucket_loader,
+                                         bucket_loader=loader,
                                          max_retry=context.config.get('TC_AWS_MAX_RETRY'))
 
-    bucket_loader.get(key, callback=handle_data)
+    loader.get(key, callback=handle_data)
 
 
 class HandleDataFunc(object):
@@ -111,3 +109,13 @@ class HandleDataFunc(object):
                 self.callback(result)
         else:
             self.callback(file_key['Body'].read())
+
+
+_bucket_loader = None
+
+
+def get_bucket_loader(bucket, region, endpoint):
+    global _bucket_loader
+    if _bucket_loader is None:
+        _bucket_loader = Bucket(bucket, region, endpoint)
+    return _bucket_loader
