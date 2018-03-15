@@ -89,10 +89,7 @@ class S3LoaderVows(Vows.Context):
     class HandleDataFuncLoader(Vows.Context):
 
         def topic(self):
-
-            conf = Config()
-            conf.define('TC_AWS_MAX_RETRIES', 3, '')
-            return Context(config=conf)
+            return 3
 
         def should_call_twice(self, topic):
 
@@ -117,7 +114,7 @@ class S3LoaderVows(Vows.Context):
                 '/'.join([s3_bucket, IMAGE_PATH]),
                 callback=callback,
                 bucket_loader=mock_bucket_loader,
-                context=topic
+                max_retry=topic
             )
 
             func(file_key)
