@@ -36,7 +36,7 @@ def load(context, url, callback):
         callback(result)
         return
 
-    loader = get_bucket_loader(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_ENDPOINT'))
+    loader = Bucket(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_ENDPOINT'))
     handle_data = HandleDataFunc.as_func(key,
                                          callback=callback,
                                          bucket_loader=loader,
@@ -110,12 +110,3 @@ class HandleDataFunc(object):
         else:
             self.callback(file_key['Body'].read())
 
-
-_bucket_loader = None
-
-
-def get_bucket_loader(bucket, region, endpoint):
-    global _bucket_loader
-    if _bucket_loader is None:
-        _bucket_loader = Bucket(bucket, region, endpoint)
-    return _bucket_loader

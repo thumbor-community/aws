@@ -13,6 +13,17 @@ from thumbor.engines import BaseEngine
 
 
 class Bucket(object):
+    _instances = {}
+
+    @staticmethod
+    def __new__(cls, bucket, region, endpoint, *args, **kwargs):
+        key = (bucket, region, endpoint) + args + reduce(lambda x, y: x + y, kwargs.items(), ())
+
+        if not cls._instances.get(key):
+            cls._instances[key] = super(Bucket, cls).__new__(cls)
+
+        return cls._instances[key]
+
     """
     This handles all communication with AWS API
     """
@@ -28,45 +39,24 @@ class Bucket(object):
         self._region = region
         self._endpoint = endpoint
 
-        self._session = None
-        self._get_client = None
-        self._put_client = None
-        self._delete_client = None
-
-    @property
-    def session(self):
-        if self._session is None:
+        if not hasattr(self, '_session'):
             self._session = botocore.session.get_session()
-            if self._endpoint is not None:
+            if endpoint is not None:
                 self._session.unregister('before-sign.s3', fix_s3_host)
-        return self._session
 
-    @property
-    def get_client(self):
-        if self._get_client is None:
+        if not hasattr(self, '_get_client'):
             self._get_client = Botocore(service='s3', region_name=self._region,
-                                        operation='GetObject', session=self.session,
+                                        operation='GetObject', session=self._session,
                                         endpoint_url=self._endpoint)
-
-        return self._get_client
-
-    @property
-    def put_client(self):
-        if self._put_client is None:
+        if not hasattr(self, '_put_client'):
             self._put_client = Botocore(service='s3', region_name=self._region,
-                                        operation='PutObject', session=self.session,
+                                        operation='PutObject', session=self._session,
                                         endpoint_url=self._endpoint)
 
-        return self._put_client
-
-    @property
-    def delete_client(self):
-        if self._delete_client is None:
+        if not hasattr(self, '_delete_client'):
             self._delete_client = Botocore(service='s3', region_name=self._region,
-                                           operation='DeleteObject', session=self.session,
+                                           operation='DeleteObject', session=self._session,
                                            endpoint_url=self._endpoint)
-
-        return self._delete_client
 
     @return_future
     def get(self, path, callback=None):
@@ -75,7 +65,7 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         :param callable callback: Callback function for once the retrieval is done
         """
-        self.get_client.call(
+        self._get_client.call(
             callback=callback,
             Bucket=self._bucket,
             Key=self._clean_key(path),
@@ -90,13 +80,13 @@ class Bucket(object):
         :param int expiry: URL validity time
         :param callable callback: Called function once done
         """
-        client = self.session.create_client('s3', region_name=self._region, endpoint_url=self._endpoint)
+        client = self._session.create_client('s3', region_name=self._region, endpoint_url=self._endpoint)
 
         url = client.generate_presigned_url(
             ClientMethod='get_object',
             Params={
                 'Bucket': self._bucket,
-                'Key':    self._clean_key(path),
+                'Key': self._clean_key(path),
             },
             ExpiresIn=expiry,
             HttpMethod=method,
@@ -131,7 +121,7 @@ class Bucket(object):
         if encrypt_key:
             args['ServerSideEncryption'] = 'AES256'
 
-        self.put_client.call(**args)
+        self._put_client.call(**args)
 
     @return_future
     def delete(self, path, callback=None):
@@ -140,7 +130,7 @@ class Bucket(object):
         :param string path: Path or 'key' to delete
         :param callable callback: Called function once done
         """
-        self.put_client.call(
+        self._delete_client.call(
             callback=callback,
             Bucket=self._bucket,
             Key=self._clean_key(path),
