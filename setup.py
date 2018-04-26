@@ -41,7 +41,6 @@ setup(
         "Operating System :: OS Independent",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Internet",
-        "Topic :: Image Processing",
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
     ],

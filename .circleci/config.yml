@@ -11,12 +11,16 @@ jobs:
       - image: bladrak/thumbor-dev:latest
     steps:
       - checkout
-      - run:
-        name: init .pypirc
-        command: |
+      - run: |
+          echo -e "[distutils]" >> ~/.pypirc
+          echo -e "index-servers =" >> ~/.pypirc
+          echo -e "    pypi" >> ~/.pypirc
+          echo -e "" >> ~/.pypirc
+
           echo -e "[pypi]" >> ~/.pypirc
-          echo -e "username = $PYPI_USERNAME" >> ~/.pypirc
-          echo -e "password = $PYPI_PASSWORD" >> ~/.pypirc
+          echo -e "username:$PYPI_USERNAME" >> ~/.pypirc
+          echo -e "password:$PYPI_PASSWORD" >> ~/.pypirc
+      - run: cat ~/.pypirc
       - run: make install
       - run: make publish
 
