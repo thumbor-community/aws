@@ -9,21 +9,28 @@ from setuptools.command.install import install
 
 def version():
     """retrieve version from tag name"""
-    tag = os.getenv('CIRCLE_TAG', '1')
+    ci_tag = os.getenv('CIRCLE_TAG')
 
-    if re.match('\d+(\.\d+)*', tag):
-        return tag
+    # Try to parse tag from CI variable, if set write version.txt file with current version
+    if ci_tag is not None:
+        if re.match('\d+(\.\d+)*', ci_tag):
+            with open('version.txt', 'w+') as f:
+                f.write(ci_tag)
+            return ci_tag
+        # Variable is set but format is incorrect, error
+        info = "Git tag: `{0}` is not set or does not match the version pattern of this app".format(
+            ci_tag
+        )
+        sys.exit(info)
 
-    info = "Git tag: {0} does not match the version pattern of this app".format(
-        tag
-    )
-    sys.exit(info)
+    # Read version from file
+    with open('version.txt') as f:
+        return f.read()
 
 def readme():
     """print long description"""
     with open('Readme.md') as f:
         return f.read()
-
 setup(
     name='tc_aws',
     version=version(),
