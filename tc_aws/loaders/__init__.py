@@ -9,6 +9,7 @@ __all__ = ['_get_bucket_and_key', '_get_bucket', '_get_key', '_validate_bucket',
 import urllib2
 import thumbor.loaders.http_loader as http_loader
 
+
 def _get_bucket_and_key(context, url):
     """
     Returns bucket and key from url
@@ -28,6 +29,7 @@ def _get_bucket_and_key(context, url):
 
     return bucket, key
 
+
 def _get_bucket(url):
     """
     Retrieves the bucket based on the URL
@@ -38,6 +40,7 @@ def _get_bucket(url):
     url_by_piece = url.lstrip("/").split("/")
 
     return url_by_piece[0]
+
 
 def _get_key(path, context):
     """
@@ -50,6 +53,7 @@ def _get_key(path, context):
     root_path = context.config.get('TC_AWS_LOADER_ROOT_PATH')
     return '/'.join([root_path, path]) if root_path is not '' else path
 
+
 def _validate_bucket(context, bucket):
     """
     Checks that bucket is allowed
@@ -61,6 +65,7 @@ def _validate_bucket(context, bucket):
     allowed_buckets = context.config.get('TC_AWS_ALLOWED_BUCKETS', default=None)
     return not allowed_buckets or bucket in allowed_buckets
 
+
 def _use_http_loader(context, url):
     """
     Should we use HTTP Loader with given path? Based on configuration as well.
@@ -71,6 +76,16 @@ def _use_http_loader(context, url):
     """
     enable_http_loader = context.config.get('TC_AWS_ENABLE_HTTP_LOADER', default=False)
     return enable_http_loader and url.startswith('http')
+
+
+def _get_request_timeout(context):
+    """
+    :param Context context: Thumbor's context
+    :return:
+    :rtype: int
+    """
+    return context.config.get('HTTP_LOADER_REQUEST_TIMEOUT', default=20)
+
 
 def _validate(context, url, normalize_url_func):
     if _use_http_loader(context, url):

@@ -13,8 +13,10 @@ from tornado.concurrent import return_future
 from . import *
 from ..aws.bucket import Bucket
 
+
 def validate(context, url, normalize_url_func=http_loader._normalize_url):
     return _validate(context, url, normalize_url_func)
+
 
 @return_future
 def load(context, url, callback):
@@ -36,7 +38,8 @@ def load(context, url, callback):
         callback(result)
         return
 
-    loader = Bucket(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_ENDPOINT'))
+    loader = Bucket(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_ENDPOINT'),
+                    request_timeout=context.config.get('TC_AWS_LOADER_REQUEST_TIMEOUT'))
     handle_data = HandleDataFunc.as_func(key,
                                          callback=callback,
                                          bucket_loader=loader,
@@ -109,4 +112,3 @@ class HandleDataFunc(object):
                 self.callback(result)
         else:
             self.callback(file_key['Body'].read())
-

@@ -27,7 +27,7 @@ class Bucket(object):
     """
     This handles all communication with AWS API
     """
-    def __init__(self, bucket, region, endpoint):
+    def __init__(self, bucket, region, endpoint, connect_timeout=20.0, request_timeout=20.0):
         """
         Constructor
         :param string bucket: The bucket name
@@ -39,6 +39,11 @@ class Bucket(object):
         self._region = region
         self._endpoint = endpoint
 
+        _defaults = {
+            'connect_timeout': float(connect_timeout),
+            'request_timeout': float(request_timeout)
+        }
+
         if not hasattr(self, '_session'):
             self._session = botocore.session.get_session()
             if endpoint is not None:
@@ -47,16 +52,16 @@ class Bucket(object):
         if not hasattr(self, '_get_client'):
             self._get_client = Botocore(service='s3', region_name=self._region,
                                         operation='GetObject', session=self._session,
-                                        endpoint_url=self._endpoint)
+                                        endpoint_url=self._endpoint, **_defaults)
         if not hasattr(self, '_put_client'):
             self._put_client = Botocore(service='s3', region_name=self._region,
                                         operation='PutObject', session=self._session,
-                                        endpoint_url=self._endpoint)
+                                        endpoint_url=self._endpoint, **_defaults)
 
         if not hasattr(self, '_delete_client'):
             self._delete_client = Botocore(service='s3', region_name=self._region,
                                            operation='DeleteObject', session=self._session,
-                                           endpoint_url=self._endpoint)
+                                           endpoint_url=self._endpoint, **_defaults)
 
     @return_future
     def get(self, path, callback=None):
