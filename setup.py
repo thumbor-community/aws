@@ -37,6 +37,7 @@ setup(
     version=version(),
     description='Thumbor AWS extensions',
     long_description=readme(),
+    long_description_content_type='text/markdown',
     author='Thumbor-Community & William King',
     author_email='h.briand@gmail.com',  # Original author email is: willtrking@gmail.com
     zip_safe=False,
