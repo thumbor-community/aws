@@ -142,6 +142,7 @@ class Bucket(object):
         while '//' in key:
             logger.debug(key)
             key = key.replace('//', '/')
+        
         if key.startswith('/'):
             key = key.replace('/', '', 1)
 
