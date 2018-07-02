@@ -143,8 +143,11 @@ class Bucket(object):
             logger.debug(key)
             key = key.replace('//', '/')
 
-        if '/' == key[0]:
-            key = key[1:]
+        try:
+            if '/' == key[0]:
+                key = key[1:]
+        except IndexError:
+            pass
 
         logger.debug('Cleansed key: {key!r}'.format(key=key))
         return key
