@@ -99,16 +99,8 @@ class S3StorageVows(Vows.Context):
             config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
             storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
             storage.put(IMAGE_URL % '4', IMAGE_BYTES)   # 1: we put the image
-
-            def check_created(created):
-                expect(created).to_equal(True) # 2.1: assertion...
-
-                def once_removed(rm):
-                    storage.exists(IMAGE_URL % '4', callback=callback) #4: we check if the image exists
-
-                storage.remove(IMAGE_URL % '4', callback=once_removed) # 3: we delete it
-
-            storage.exists(IMAGE_URL % '4', callback=check_created) # 2: we check it exists
+            storage.remove(IMAGE_URL % '4') # 2: we delete it
+            storage.exists(IMAGE_URL % '4', callback=callback) # 3: we check it exists
 
         def should_be_put_and_removed(self, topic):
             expect(topic.args[0]).to_equal(False)   # 4.1: assertion...
