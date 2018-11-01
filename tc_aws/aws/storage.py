@@ -87,7 +87,9 @@ class AwsStorage():
         Deletes data at path
         :param string path: Path to delete
         """
-        self.storage.delete(path)
+        file_abspath = self._normalize_path(path)
+
+        self.storage.delete(file_abspath)
 
     @return_future
     def exists(self, path, callback):
