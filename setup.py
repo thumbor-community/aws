@@ -37,6 +37,7 @@ setup(
     version=version(),
     description='Thumbor AWS extensions',
     long_description=readme(),
+    long_description_content_type='text/markdown',
     author='Thumbor-Community & William King',
     author_email='h.briand@gmail.com',  # Original author email is: willtrking@gmail.com
     zip_safe=False,
@@ -56,7 +57,8 @@ setup(
     install_requires=[
         'python-dateutil',
         'thumbor>=6.0.0,<7',
-        'tornado-botocore>=1.3.1',
+        'tornado-botocore',
+        #'botocore',
     ],
     extras_require={
         'tests': [
@@ -64,7 +66,7 @@ setup(
             'coverage',
             'tornado_pyvows',
             'boto',
-            'moto',
+            'moto<=1.3.3',
             'mock',
         ],
     },
