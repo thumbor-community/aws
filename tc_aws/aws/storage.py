@@ -87,7 +87,7 @@ class AwsStorage():
         Deletes data at path
         :param string path: Path to delete
         """
-        self.storage.delete(path)
+        self.storage.delete(path, callback)
 
     @return_future
     def exists(self, path, callback):
@@ -109,7 +109,7 @@ class AwsStorage():
     def is_expired(self, key):
         """
         Tells whether key has expired
-        :param string key: Path to check
+        :param  key: Path to check
         :return: Whether it is expired or not
         :rtype: bool
         """
@@ -164,13 +164,15 @@ class AwsStorage():
 
         self.storage.get(crypto_path, callback=return_data)
 
-    def put_crypto(self, path):
+    @return_future
+    def put_crypto(self, path, callback):
         """
         Stores crypto data at given path
         :param string path: Path to store the data at
         :return: Path where the crypto data is stored
         """
         if not self.context.config.STORES_CRYPTO_KEY_FOR_EACH_IMAGE:
+            callback(None)
             return
 
         if not self.context.server.security_key:
@@ -179,9 +181,11 @@ class AwsStorage():
         file_abspath = self._normalize_path(path)
         crypto_path = '%s.txt' % splitext(file_abspath)[0]
 
-        self.set(self.context.server.security_key, crypto_path)
+        def cb(*args, **kwargs):
+            callback(crypto_path)
 
-        return crypto_path
+        self.set(self.context.server.security_key, crypto_path, cb)
+
 
     @return_future
     def get_detector_data(self, path, callback):
@@ -202,7 +206,8 @@ class AwsStorage():
 
         self.storage.get(path, callback=return_data)
 
-    def put_detector_data(self, path, data):
+    @return_future
+    def put_detector_data(self, path, data, callback):
         """
         Stores detector data at given path
         :param string path: Path to store the data at
@@ -214,9 +219,7 @@ class AwsStorage():
 
         path = '%s.detectors.txt' % splitext(file_abspath)[0]
 
-        self.set(dumps(data), path)
-
-        return path
+        self.set(dumps(data), path, callback)
 
     def _get_error(self, response):
         """

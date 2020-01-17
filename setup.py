@@ -5,7 +5,6 @@ import sys
 import re
 
 from setuptools import setup, find_packages
-from setuptools.command.install import install
 
 def version():
     """retrieve version from tag name"""
@@ -58,16 +57,14 @@ setup(
         'python-dateutil',
         'thumbor>=6.0.0,<7',
         'tornado-botocore',
-        #'botocore',
     ],
     extras_require={
         'tests': [
-            'pyvows',
             'coverage',
-            'tornado_pyvows',
             'boto',
-            'moto<=1.3.3',
+            'moto[server]',
             'mock',
+            'nose',
         ],
     },
 )

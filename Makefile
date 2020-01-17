@@ -20,7 +20,7 @@ docs: setup_docs build_docs
 	python -mwebbrowser file:///`pwd`/docs/_build/html/index.html
 
 test: setup
-	pyvows -c -l tc_aws
+	nosetests
 
 publish:
 	python setup.py register -r pypi
