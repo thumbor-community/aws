@@ -41,6 +41,14 @@ class Storage(AwsStorage, BaseStorage):
         self.set(bytes, self._normalize_path(path), callback=once_written)
 
     @return_future
+    def remove(self, path, callback=None):
+        """
+        Deletes data at path
+        :param string path: Path to delete
+        """
+        super(Storage, self).remove(self._normalize_path(path), callback)
+
+    @return_future
     def get(self, path, callback):
         """
         Gets data at path
