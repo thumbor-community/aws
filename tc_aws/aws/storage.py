@@ -82,12 +82,12 @@ class AwsStorage():
         )
 
     @return_future
-    def remove(self, path, callback=None):
+    def remove(self, abspath, callback=None):
         """
-        Deletes data at path
-        :param string path: Path to delete
+        Deletes data at abspath
+        :param string abspath: Absolute path to delete
         """
-        self.storage.delete(path, callback)
+        self.storage.delete(abspath, callback)
 
     @return_future
     def exists(self, path, callback):
