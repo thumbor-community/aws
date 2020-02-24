@@ -54,7 +54,7 @@ class S3StorageTestCase(S3MockedAsyncTestCase):
 
     @gen_test
     def test_can_remove_instance(self):
-        config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
+        config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket,TC_AWS_STORAGE_ROOT_PATH='nana')
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
         yield storage.put(IMAGE_URL % '4', IMAGE_BYTES)
         yield storage.remove(IMAGE_URL % '4')
