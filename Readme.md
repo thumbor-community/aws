@@ -36,7 +36,6 @@ We recommend to use python-virtualevn (virtualenv and virtualenv-wrapper)
 ## Features
 
  * *tc_aws.loaders.s3_loader* - takes a S3 key path and optional bucket name, and downloads the file through the S3 API.
- * *tc_aws.loaders.presigning_loader* - instead of downloading via the API, generates a signed link to the file on S3, then feeds it to the Thumbor's regular http loader. This will likely be more performant, as it avoids async issues with the boto library (see [#22](https://github.com/thumbor-community/aws/pull/22) and [#14](https://github.com/thumbor-community/aws/issues/14).
  * *tc_aws.result_storages.s3_storage*
  * *tc_aws.storages.s3_storage*
 
@@ -61,7 +60,7 @@ TC_AWS_ENDPOINT=''
 
 ###  Loader settings
 
-When using either ``tc_aws.loaders.s3_loader`` or ``tc_aws.loaders.presigning_loader``.
+When using ``tc_aws.loaders.s3_loader``.
 
 ```.ini
 TC_AWS_STORAGE_BUCKET='' # S3 bucket for Storage

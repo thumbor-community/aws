@@ -14,7 +14,7 @@ import time
 import botocore.session
 import mock
 import requests
-from botocore.client import ClientCreator
+from aiobotocore.session import AioSession
 from tornado.testing import AsyncTestCase
 
 from tc_aws.aws.bucket import Bucket
@@ -67,11 +67,12 @@ def stop_process(process):
         raise RuntimeError(msg)
 
 
-class FakeClientCreator(ClientCreator):
+class FakeSession(AioSession):
+
     def create_client(self, *args, **kwargs):
         if kwargs['endpoint_url'] is None:
             kwargs['endpoint_url'] = "http://localhost:5000"
-        return super(FakeClientCreator, self).create_client(*args, **kwargs)
+        return super(FakeSession, self).create_client(*args, **kwargs)
 
 
 class S3MockedAsyncTestCase(AsyncTestCase):
@@ -97,13 +98,13 @@ class S3MockedAsyncTestCase(AsyncTestCase):
 
         requests.post("http://localhost:5000/moto-api/reset")
 
-        self._client_patcher = mock.patch('botocore.client.ClientCreator', FakeClientCreator)
-        self._client_patcher.start()
-
-        client = botocore.session.get_session().create_client('s3')
+        client = botocore.session.get_session().create_client('s3', endpoint_url='http://localhost:5000/')
         client.create_bucket(Bucket=s3_bucket)
 
-        self.addCleanup(self._client_patcher.stop)
+        client_patcher = mock.patch('aiobotocore.session.AioSession', FakeSession)
+        client_patcher.start()
+
+        self.addCleanup(client_patcher.stop)
 
     def tearDown(self):
         super(S3MockedAsyncTestCase, self).tearDown()
