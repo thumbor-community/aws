@@ -13,7 +13,7 @@ s3_bucket = 'thumbor-images-test'
 IMAGE_URL = 's.glbimg.com/some/image_%s.jpg'
 IMAGE_PATH = join(abspath(dirname(__file__)), 'image.jpg')
 
-with open(IMAGE_PATH, 'r') as img:
+with open(IMAGE_PATH, 'rb') as img:
     IMAGE_BYTES = img.read()
 
 

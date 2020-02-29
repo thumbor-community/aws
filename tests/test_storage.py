@@ -15,7 +15,7 @@ from thumbor.config import Config
 from thumbor.context import Context, RequestParameters
 from tornado.testing import gen_test
 
-from fixtures.storage_fixture import IMAGE_URL, IMAGE_BYTES, get_server, s3_bucket
+from .fixtures.storage_fixture import IMAGE_URL, IMAGE_BYTES, get_server, s3_bucket
 from tc_aws.storages.s3_storage import Storage
 from tests import S3MockedAsyncTestCase
 
@@ -23,67 +23,60 @@ from tests import S3MockedAsyncTestCase
 class S3StorageTestCase(S3MockedAsyncTestCase):
 
     @gen_test
-    def test_can_store_image(self):
+    async def test_can_store_image(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
 
-        yield storage.put(IMAGE_URL % '1', IMAGE_BYTES)
-
-        topic = yield storage.get(IMAGE_URL % '1')
+        await storage.put(IMAGE_URL % '1', IMAGE_BYTES)
+        topic = await storage.get(IMAGE_URL % '1')
 
         self.assertEqual(topic, IMAGE_BYTES)
 
     @gen_test
-    def test_can_get_image_existance(self):
+    async def test_can_get_image_existance(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
 
-        yield storage.put(IMAGE_URL % '3', IMAGE_BYTES)
-        topic = yield storage.exists(IMAGE_URL % '3')
+        await storage.put(IMAGE_URL % '3', IMAGE_BYTES)
+        topic = await storage.exists(IMAGE_URL % '3')
 
         self.assertTrue(topic)
 
     @gen_test
-    def test_can_get_image_inexistance(self):
+    async def test_can_get_image_inexistance(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
 
-        topic = yield storage.exists(IMAGE_URL % '9999')
+        topic = await storage.exists(IMAGE_URL % '9999')
 
         self.assertFalse(topic)
 
     @gen_test
-    def test_can_remove_instance(self):
+    async def test_can_remove_instance(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket,TC_AWS_STORAGE_ROOT_PATH='nana')
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        yield storage.put(IMAGE_URL % '4', IMAGE_BYTES)
-        yield storage.remove(IMAGE_URL % '4')
-        topic = yield storage.exists(IMAGE_URL % '4')
+        await storage.put(IMAGE_URL % '4', IMAGE_BYTES)
+        await storage.remove(IMAGE_URL % '4')
+        topic = await storage.exists(IMAGE_URL % '4')
 
         self.assertFalse(topic)
 
     @gen_test
-    def test_can_remove_then_put_image(self):
+    async def test_can_remove_then_put_image(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        yield storage.put(IMAGE_URL % '5', IMAGE_BYTES)
+        await storage.put(IMAGE_URL % '5', IMAGE_BYTES)
 
-        created = yield storage.exists(IMAGE_URL % '5')
+        created = await storage.exists(IMAGE_URL % '5')
         self.assertTrue(created)
 
-        yield storage.remove(IMAGE_URL % '5')
-        exists = yield storage.exists(IMAGE_URL % '5')
+        await storage.remove(IMAGE_URL % '5')
+        exists = await storage.exists(IMAGE_URL % '5')
         self.assertFalse(exists)
 
-        yield storage.put(IMAGE_URL % '5', IMAGE_BYTES)
-        exists = yield storage.exists(IMAGE_URL % '5')
+        await storage.put(IMAGE_URL % '5', IMAGE_BYTES)
+        exists = await storage.exists(IMAGE_URL % '5')
         self.assertTrue(exists)
-
-    def test_can_return_path(self):
-        config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
-        storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        topic = storage.resolve_original_photo_path("toto")
-        self.assertEqual(topic, 'toto')
 
     def test_should_return_storage_prefix(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket, TC_AWS_STORAGE_ROOT_PATH='tata')
@@ -102,62 +95,62 @@ class S3StorageTestCase(S3MockedAsyncTestCase):
 class CryptoS3StorageTestCase(S3MockedAsyncTestCase):
 
     @gen_test
-    def test_should_raise_on_invalid_config(self):
+    async def test_should_raise_on_invalid_config(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket, STORES_CRYPTO_KEY_FOR_EACH_IMAGE=True)
         storage = Storage(Context(config=config, server=get_server('')))
 
-        yield storage.put(IMAGE_URL % '9999', IMAGE_BYTES)
+        await storage.put(IMAGE_URL % '9999', IMAGE_BYTES)
 
         with assert_raises_regexp(RuntimeError,
                                   "STORES_CRYPTO_KEY_FOR_EACH_IMAGE can't be True if no SECURITY_KEY specified"):
-            storage.put_crypto(IMAGE_URL % '9999')
+            await storage.put_crypto(IMAGE_URL % '9999')
 
     @gen_test
-    def test_getting_crypto_for_a_new_image_returns_none(self):
+    async def test_getting_crypto_for_a_new_image_returns_none(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket, STORES_CRYPTO_KEY_FOR_EACH_IMAGE=True)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        topic = yield storage.get_crypto(IMAGE_URL % '9999')
+        topic = await storage.get_crypto(IMAGE_URL % '9999')
         self.assertIsNone(topic)
 
     @gen_test
-    def test_does_not_store_if_config_says_not_to(self):
+    async def test_does_not_store_if_config_says_not_to(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket, STORES_CRYPTO_KEY_FOR_EACH_IMAGE=False)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        yield storage.put(IMAGE_URL % '9998', IMAGE_BYTES)
-        yield storage.put_crypto(IMAGE_URL % '9998')
-        topic = yield storage.get_crypto(IMAGE_URL % '9998')
+        await storage.put(IMAGE_URL % '9998', IMAGE_BYTES)
+        await storage.put_crypto(IMAGE_URL % '9998')
+        topic = await storage.get_crypto(IMAGE_URL % '9998')
         self.assertIsNone(topic)
 
     @gen_test
-    def test_can_store_crypto(self):
+    async def test_can_store_crypto(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket, STORES_CRYPTO_KEY_FOR_EACH_IMAGE=True)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        yield storage.put(IMAGE_URL % '6', IMAGE_BYTES)
-        yield storage.put_crypto(IMAGE_URL % '6')
-        topic = yield storage.get_crypto(IMAGE_URL % '6')
+        await storage.put(IMAGE_URL % '6', IMAGE_BYTES)
+        await storage.put_crypto(IMAGE_URL % '6')
+        topic = await storage.get_crypto(IMAGE_URL % '6')
 
         self.assertIsNotNone(topic)
         self.assertNotIsInstance(topic, BaseException)
-        self.assertEqual(topic.read(), 'ACME-SEC')
+        self.assertEqual(topic, 'ACME-SEC')
 
 
 class DetectorS3StorageTestCase(S3MockedAsyncTestCase):
 
     @gen_test
-    def test_can_store_detector_data(self):
+    async def test_can_store_detector_data(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        yield storage.put(IMAGE_URL % '7', IMAGE_BYTES)
-        yield storage.put_detector_data(IMAGE_URL % '7', 'some-data')
-        topic = yield storage.get_detector_data(IMAGE_URL % '7')
+        await storage.put(IMAGE_URL % '7', IMAGE_BYTES)
+        await storage.put_detector_data(IMAGE_URL % '7', 'some-data')
+        topic = await storage.get_detector_data(IMAGE_URL % '7')
 
         self.assertEqual(topic, 'some-data')
 
     @gen_test
-    def test_returns_none_if_no_detector_data(self):
+    async def test_returns_none_if_no_detector_data(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
-        topic = yield storage.get_detector_data(IMAGE_URL % '9999')
+        topic = await storage.get_detector_data(IMAGE_URL % '9999')
 
         self.assertIsNone(topic)
 
