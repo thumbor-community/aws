@@ -28,7 +28,7 @@ def version():
 
 def readme():
     """print long description"""
-    with open('Readme.md') as f:
+    with open('README.md') as f:
         return f.read()
 
 setup(
