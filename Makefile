@@ -13,6 +13,9 @@ setup:
 setup_docs:
 	pip install -r docs/requirements.txt
 
+setup_publish:
+	pip install -r publish_requirements.txt
+
 build_docs:
 	cd docs && make html
 
@@ -22,6 +25,6 @@ docs: setup_docs build_docs
 test: setup
 	nosetests
 
-publish:
-	python setup.py register -r pypi
-	python setup.py sdist upload -r pypi
+publish: setup_publish
+	python setup.py sdist
+	twine upload dist/*
