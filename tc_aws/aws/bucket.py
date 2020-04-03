@@ -69,7 +69,6 @@ class Bucket(object):
         :param string path: Path or 'key' for requested object
         :param string method: Method for requested URL
         :param int expiry: URL validity time
-        :param callable callback: Called function once done
         """
 
         url = await self._client.generate_presigned_url(
@@ -92,7 +91,6 @@ class Bucket(object):
         :param dict metadata: Metadata to store with this data
         :param bool reduced_redundancy: Whether to reduce storage redundancy or not?
         :param bool encrypt_key: Encrypt data?
-        :param callable callback: Called function once done
         """
         storage_class = 'REDUCED_REDUNDANCY' if reduced_redundancy else 'STANDARD'
         content_type = BaseEngine.get_mimetype(data) or 'application/octet-stream'

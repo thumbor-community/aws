@@ -47,7 +47,6 @@ class AwsStorage():
         """
         Gets data at path
         :param string path: Path for data
-        :param callable callback: Callback function for once the retrieval is done
         """
         file_abspath = self._normalize_path(path)
 

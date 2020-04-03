@@ -33,7 +33,6 @@ class Storage(AwsStorage, BaseStorage):
         Stores image
         :param string path: Path to store data at
         :param bytes bytes: Data to store
-        :param callable callback:
         :rtype: string
         """
         try:
@@ -118,7 +117,6 @@ class Storage(AwsStorage, BaseStorage):
         """
         Retrieves detector data from storage
         :param string path: Path where the data is stored
-        :param callable callback: Callback function for once the retrieval is done
         """
         file_abspath = self._normalize_path(path)
         path = '%s.detectors.txt' % splitext(file_abspath)[0]
@@ -150,7 +148,6 @@ class Storage(AwsStorage, BaseStorage):
         """
         Tells if data exists at given path
         :param string path: Path to check
-        :param callable callback: Callback function for once the check is done
         """
         file_abspath = self._normalize_path(path)
 
