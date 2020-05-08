@@ -104,7 +104,8 @@ class Storage(AwsStorage, BaseStorage):
         crypto_path = "%s.txt" % (splitext(file_abspath)[0])
 
         try:
-            file_key = await self.storage.get(crypto_path)
+            storage = await self._get_storage()
+            file_key = await storage.get(crypto_path)
         except ClientError as err:
             logger.warn("[STORAGE] s3 key not found at %s" % crypto_path)
             return None
@@ -122,7 +123,8 @@ class Storage(AwsStorage, BaseStorage):
         path = '%s.detectors.txt' % splitext(file_abspath)[0]
 
         try:
-            file_key = await self.storage.get(path)
+            storage = await self._get_storage()
+            file_key = await storage.get(path)
         except ClientError:
             return None
 
@@ -152,7 +154,8 @@ class Storage(AwsStorage, BaseStorage):
         file_abspath = self._normalize_path(path)
 
         try:
-            await self.storage.get(file_abspath)
+            storage = await self._get_storage()
+            await storage.get(file_abspath)
         except ClientError as err:
             if err.response['Error']['Code'] == 'NoSuchKey':
                 return False
@@ -165,5 +168,6 @@ class Storage(AwsStorage, BaseStorage):
         Deletes data at path
         :param string path: Path to delete
         """
-        return await self.storage.delete(self._normalize_path(path))
+        storage = await self._get_storage()
+        return await storage.delete(self._normalize_path(path))
 

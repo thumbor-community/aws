@@ -58,7 +58,7 @@ setup(
     install_requires=[
         'python-dateutil',
         'thumbor>=7.0.0a2,<8',
-        'aiobotocore>=1.0.1,<2',
+        'aiobotocore>=1.0.2,<2',
     ],
     extras_require={
         'tests': [

@@ -33,7 +33,7 @@ class S3StorageTestCase(S3MockedAsyncTestCase):
         storage = Storage(ctx)
         await storage.put(IMAGE_BYTES)
 
-        topic = await storage.get('my-image-2.jpg')
+        topic = await storage.get()
 
         self.assertEqual(topic.buffer, IMAGE_BYTES)
 

@@ -33,24 +33,33 @@ class Bucket(object):
         :param string endpoint: A specific endpoint to use
         :return: The created bucket
         """
+        self._endpoint = endpoint
         self._bucket = bucket
+        self._config = Config(region_name=region)
+        self._client = None
 
-        session = aiobotocore.get_session()
-
-        config = None
         if max_retry is not None:
-            config = Config(
+            self._config = self._config.merge(Config(
                 retries=dict(
                     max_attempts=max_retry
                 )
-            )
+            ))
 
-        self._client = session.create_client(
-            's3',
-            region_name=region,
-            endpoint_url=endpoint,
-            config=config
-        )
+    def __await__(self):
+        return self._load_client().__await__()
+
+    async def _load_client(self):
+        if self._client is None:
+            cm = aiobotocore.get_session().create_client(
+                's3',
+                endpoint_url=self._endpoint,
+                config=self._config
+            )
+            _cm_type = type(cm)
+
+            self._client = await _cm_type.__aenter__(cm)
+
+        return self
 
     async def get(self, path):
         """
@@ -62,26 +71,6 @@ class Bucket(object):
             Bucket=self._bucket,
             Key=self._clean_key(path),
         )
-
-    async def get_url(self, path, method='GET', expiry=3600):
-        """
-        Generates the presigned url for given key & methods
-        :param string path: Path or 'key' for requested object
-        :param string method: Method for requested URL
-        :param int expiry: URL validity time
-        """
-
-        url = await self._client.generate_presigned_url(
-            ClientMethod='get_object',
-            Params={
-                'Bucket': self._bucket,
-                'Key': self._clean_key(path),
-            },
-            ExpiresIn=expiry,
-            HttpMethod=method,
-        )
-
-        return url
 
     async def put(self, path, data, metadata=None, reduced_redundancy=False, encrypt_key=False):
         """

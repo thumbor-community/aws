@@ -29,7 +29,7 @@ async def load(context, url):
                               error=LoaderResult.ERROR_NOT_FOUND)
         return result
 
-    loader = Bucket(
+    loader = await Bucket(
         bucket,
         context.config.get('TC_AWS_REGION'),
         context.config.get('TC_AWS_ENDPOINT'),
@@ -114,7 +114,7 @@ def _get_key(path, context):
     :rtype: string
     """
     root_path = context.config.get('TC_AWS_LOADER_ROOT_PATH')
-    return '/'.join([root_path, path]) if root_path is not '' else path
+    return '/'.join([root_path, path]) if root_path != '' else path
 
 
 def _validate_bucket(context, bucket):

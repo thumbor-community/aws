@@ -24,14 +24,13 @@ class AwsStorage():
         """
         return self.context.config.AUTO_WEBP and hasattr(self.context, 'request') and self.context.request.accepts_webp
 
-    @property
-    def storage(self):
+    async def _get_storage(self):
         """
         Instantiates bucket based on configuration
         :return: The bucket
         :rtype: Bucket
         """
-        return Bucket(self._get_config('BUCKET'), self.context.config.get('TC_AWS_REGION'),
+        return await Bucket(self._get_config('BUCKET'), self.context.config.get('TC_AWS_REGION'),
                       self.context.config.get('TC_AWS_ENDPOINT'))
 
     def __init__(self, context, config_prefix):
@@ -50,7 +49,8 @@ class AwsStorage():
         """
         file_abspath = self._normalize_path(path)
 
-        return await self.storage.get(file_abspath)
+        storage = await self._get_storage()
+        return await storage.get(file_abspath)
 
     def is_expired(self, key):
         """
@@ -70,7 +70,7 @@ class AwsStorage():
 
             return timediff.seconds > expire_in_seconds
         else:
-            #If our key is bad just say we're expired
+            # If our key is bad just say we're expired
             return True
 
     async def _put_object(self, object_data, path, metadata=None):
@@ -82,7 +82,8 @@ class AwsStorage():
         :rtype: string
         """
 
-        return await self.storage.put(
+        storage = await self._get_storage()
+        return await storage.put(
             path,
             object_data,
             metadata=metadata,
@@ -110,7 +111,7 @@ class AwsStorage():
         path_segments = [path]
 
         root_path = self._get_config('ROOT_PATH')
-        if root_path and root_path is not '':
+        if root_path and root_path != '':
             path_segments.insert(0, root_path)
 
         if self.is_auto_webp:
