@@ -2,13 +2,13 @@ version: 2
 jobs:
   build:
     docker:
-      - image: bladrak/thumbor-dev:latest
+      - image: bladrak/thumbor-dev-py3:latest
     steps:
       - checkout
       - run: make test
   deploy:
     docker:
-      - image: bladrak/thumbor-dev:latest
+      - image: bladrak/thumbor-dev-py3:latest
     steps:
       - checkout
       - run: |
