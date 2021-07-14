@@ -52,6 +52,20 @@ class Bucket(object):
                 config=config
             )
 
+    async def exists(self, path):
+        """
+        Checks if an object exists at a given path
+        :param string path: Path or 'key' to retrieve AWS object
+        """
+        try:
+            await self._client.head_object(
+                Bucket=self._bucket,
+                Key=self._clean_key(path),
+            )
+        except Exception:
+            return False
+        return True
+
     async def get(self, path):
         """
         Returns object at given path

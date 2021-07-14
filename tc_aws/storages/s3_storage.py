@@ -150,15 +150,7 @@ class Storage(AwsStorage, BaseStorage):
         :param string path: Path to check
         """
         file_abspath = self._normalize_path(path)
-
-        try:
-            await self.storage.get(file_abspath)
-        except ClientError as err:
-            if err.response['Error']['Code'] == 'NoSuchKey':
-                return False
-            raise
-
-        return True
+        return await self.storage.exists(file_abspath)
 
     async def remove(self, path):
         """
