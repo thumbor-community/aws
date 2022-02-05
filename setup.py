@@ -64,7 +64,7 @@ setup(
             'boto',
             'moto[server]',
             'mock',
-            'nose',
+            'pytest',
         ],
     },
 )
