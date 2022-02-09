@@ -4,10 +4,8 @@
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
 
-import botocore.session
-from botocore.utils import fix_s3_host
-from tornado_botocore.base import Botocore
-from tornado.concurrent import return_future
+import aiobotocore
+from botocore.client import Config
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
 
@@ -17,7 +15,7 @@ class Bucket(object):
 
     @staticmethod
     def __new__(cls, bucket, region, endpoint, *args, **kwargs):
-        key = (bucket, region, endpoint) + args + reduce(lambda x, y: x + y, kwargs.items(), ())
+        key = (bucket, region, endpoint) + args + tuple(kwargs.items())
 
         if not cls._instances.get(key):
             cls._instances[key] = super(Bucket, cls).__new__(cls)
@@ -27,7 +25,7 @@ class Bucket(object):
     """
     This handles all communication with AWS API
     """
-    def __init__(self, bucket, region, endpoint):
+    def __init__(self, bucket, region, endpoint, max_retry=None):
         """
         Constructor
         :param string bucket: The bucket name
@@ -36,53 +34,44 @@ class Bucket(object):
         :return: The created bucket
         """
         self._bucket = bucket
-        self._region = region
-        self._endpoint = endpoint
 
-        if not hasattr(self, '_session'):
-            self._session = botocore.session.get_session()
-            if endpoint is not None:
-                self._session.unregister('before-sign.s3', fix_s3_host)
+        session = aiobotocore.get_session()
 
-        if not hasattr(self, '_get_client'):
-            self._get_client = Botocore(service='s3', region_name=self._region,
-                                        operation='GetObject', session=self._session,
-                                        endpoint_url=self._endpoint)
-        if not hasattr(self, '_put_client'):
-            self._put_client = Botocore(service='s3', region_name=self._region,
-                                        operation='PutObject', session=self._session,
-                                        endpoint_url=self._endpoint)
+        config = None
+        if max_retry is not None:
+            config = Config(
+                retries=dict(
+                    max_attempts=max_retry
+                )
+            )
 
-        if not hasattr(self, '_delete_client'):
-            self._delete_client = Botocore(service='s3', region_name=self._region,
-                                           operation='DeleteObject', session=self._session,
-                                           endpoint_url=self._endpoint)
+        self._client = session.create_client(
+            's3',
+            region_name=region,
+            endpoint_url=endpoint,
+            config=config
+        )
 
-    @return_future
-    def get(self, path, callback=None):
+    async def get(self, path):
         """
         Returns object at given path
         :param string path: Path or 'key' to retrieve AWS object
-        :param callable callback: Callback function for once the retrieval is done
         """
-        self._get_client.call(
-            callback=callback,
+
+        return await self._client.get_object(
             Bucket=self._bucket,
             Key=self._clean_key(path),
         )
 
-    @return_future
-    def get_url(self, path, method='GET', expiry=3600, callback=None):
+    async def get_url(self, path, method='GET', expiry=3600):
         """
         Generates the presigned url for given key & methods
         :param string path: Path or 'key' for requested object
         :param string method: Method for requested URL
         :param int expiry: URL validity time
-        :param callable callback: Called function once done
         """
-        client = self._session.create_client('s3', region_name=self._region, endpoint_url=self._endpoint)
 
-        url = client.generate_presigned_url(
+        url = await self._client.generate_presigned_url(
             ClientMethod='get_object',
             Params={
                 'Bucket': self._bucket,
@@ -92,10 +81,9 @@ class Bucket(object):
             HttpMethod=method,
         )
 
-        callback(url)
+        return url
 
-    @return_future
-    def put(self, path, data, metadata={}, reduced_redundancy=False, encrypt_key=False, callback=None):
+    async def put(self, path, data, metadata=None, reduced_redundancy=False, encrypt_key=False):
         """
         Stores data at given path
         :param string path: Path or 'key' for created/updated object
@@ -103,35 +91,32 @@ class Bucket(object):
         :param dict metadata: Metadata to store with this data
         :param bool reduced_redundancy: Whether to reduce storage redundancy or not?
         :param bool encrypt_key: Encrypt data?
-        :param callable callback: Called function once done
         """
         storage_class = 'REDUCED_REDUNDANCY' if reduced_redundancy else 'STANDARD'
         content_type = BaseEngine.get_mimetype(data) or 'application/octet-stream'
 
         args = dict(
-            callback=callback,
             Bucket=self._bucket,
             Key=self._clean_key(path),
             Body=data,
             ContentType=content_type,
-            Metadata=metadata,
             StorageClass=storage_class,
         )
 
         if encrypt_key:
             args['ServerSideEncryption'] = 'AES256'
 
-        self._put_client.call(**args)
+        if metadata is not None:
+            args['Metadata'] = metadata
 
-    @return_future
-    def delete(self, path, callback=None):
+        return await self._client.put_object(**args)
+
+    async def delete(self, path):
         """
         Deletes key at given path
         :param string path: Path or 'key' to delete
-        :param callable callback: Called function once done
         """
-        self._delete_client.call(
-            callback=callback,
+        return await self._client.delete_object(
             Bucket=self._bucket,
             Key=self._clean_key(path),
         )

@@ -3,8 +3,7 @@
 # Copyright (c) 2015-2016, thumbor-community
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
-
-from tornado.concurrent import return_future
+from botocore.exceptions import BotoCoreError, ClientError
 from thumbor.result_storages import BaseStorage, ResultStorageResult
 
 from ..aws.storage import AwsStorage
@@ -25,44 +24,53 @@ class Storage(AwsStorage, BaseStorage):
         AwsStorage.__init__(self, context, 'TC_AWS_RESULT_STORAGE')
         self.storage_expiration_seconds = context.config.get('RESULT_STORAGE_EXPIRATION_SECONDS', 3600)
 
-    @return_future
-    def put(self, bytes, callback=None):
+    async def put(self, image_bytes):
         """
         Stores image
-        :param bytes bytes: Data to store
-        :param callable callback: Method called once done
-        :rtype: string
+        :param bytes image_bytes: Data to store
         """
         path = self._normalize_path(self.context.request.url)
 
-        if callback is None:
-            def callback(key):
-                self._handle_error(key)
+        metadata = {}
 
-        super(Storage, self).set(bytes, path, callback=callback)
+        if self.context.config.get('TC_AWS_STORE_METADATA'):
+            metadata = dict(self.context.headers)
 
-    @return_future
-    def get(self, path=None, callback=None):
+        try:
+            return await self._put_object(image_bytes, path, metadata)
+        except BotoCoreError as err:
+            logger.exception('Unable to store result image object: %s', err)
+            return None
+
+    async def get(self, path = None):
         """
         Retrieves data
         :param string path: Path to load data (defaults to request URL)
-        :param callable callback: Method called once done
         """
         if path is None:
             path = self.context.request.url
 
-        def return_result(key):
-            if key is None or self._get_error(key) or self.is_expired(key):
-                callback(None)
-            else:
-                result = ResultStorageResult()
-                result.buffer     = key['Body'].read()
-                result.successful = True
-                result.metadata   = key.copy()
-                result.metadata.pop('Body')
 
-                logger.debug(str(result.metadata))
+        try:
+            key = await super(Storage, self).get(path)
+        except ClientError:
+            return None
 
-                callback(result)
+        if key is None or self.is_expired(key):
+            return None
 
-        super(Storage, self).get(path, callback=return_result)
+        result = ResultStorageResult()
+        result.buffer = await key['Body'].read()
+        result.successful = True
+
+        result.metadata = {
+            "LastModified": key.get('LastModified'),
+            "ContentLength": key.get('ContentLength', None),
+            "ContentType": key.get('ContentType'),
+        }
+
+        result.metadata.update(key.get('Metadata'))
+
+        logger.debug(str(result.metadata))
+
+        return result

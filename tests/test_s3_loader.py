@@ -6,11 +6,12 @@
 
 import botocore.session
 from derpconf.config import Config
-from mock import patch, MagicMock
+from mock import patch
 from thumbor.context import Context
+from thumbor.loaders import LoaderResult
 from tornado.testing import gen_test
 
-from fixtures.storage_fixture import IMAGE_PATH, IMAGE_BYTES, s3_bucket
+from .fixtures.storage_fixture import IMAGE_PATH, IMAGE_BYTES, s3_bucket
 from tc_aws.loaders import s3_loader
 from tests import S3MockedAsyncTestCase
 
@@ -18,9 +19,8 @@ from tests import S3MockedAsyncTestCase
 class S3LoaderTestCase(S3MockedAsyncTestCase):
 
     @gen_test
-    def test_can_load_image(self):
-        client = botocore.session.get_session().create_client('s3')
-        client.create_bucket(Bucket=s3_bucket)
+    async def test_can_load_image(self):
+        client = botocore.session.get_session().create_client('s3', endpoint_url='http://localhost:5000')
 
         client.put_object(
             Bucket=s3_bucket,
@@ -33,65 +33,44 @@ class S3LoaderTestCase(S3MockedAsyncTestCase):
             TC_AWS_LOADER_ROOT_PATH='root_path'
         )
 
-        image = yield s3_loader.load(Context(config=conf), IMAGE_PATH)
-        self.assertEqual(image, IMAGE_BYTES)
+        loader_result = await s3_loader.load(Context(config=conf), IMAGE_PATH)
+        self.assertTrue(loader_result.successful)
+        self.assertEqual(loader_result.buffer, IMAGE_BYTES)
+        self.assertTrue('size' in loader_result.metadata)
+        self.assertIsNone(loader_result.error)
 
     @gen_test
-    def test_can_validate_buckets(self):
+    async def test_returns_404_on_no_image(self):
+        conf = Config(
+            TC_AWS_LOADER_BUCKET=s3_bucket,
+            TC_AWS_LOADER_ROOT_PATH='root_path'
+        )
+
+        loader_result = await s3_loader.load(Context(config=conf), 'foo-bar.jpg')
+        self.assertFalse(loader_result.successful)
+        self.assertIsNone(loader_result.buffer)
+        self.assertEqual(loader_result.error, LoaderResult.ERROR_NOT_FOUND)
+
+    @gen_test
+    async def test_can_validate_buckets(self):
         conf = Config(
             TC_AWS_ALLOWED_BUCKETS=['whitelist_bucket'],
             TC_AWS_LOADER_BUCKET=None,
         )
 
-        image = yield s3_loader.load(Context(config=conf), '/'.join([s3_bucket, IMAGE_PATH]))
+        image = await s3_loader.load(Context(config=conf), '/'.join([s3_bucket, IMAGE_PATH]))
         self.assertIsNone(image.buffer)
 
-    @patch('thumbor.loaders.http_loader.load_sync')
+    @patch('thumbor.loaders.http_loader.load')
     @gen_test
-    def test_should_use_http_loader(self, load_sync_patch):
-        def cb(a, b, callback, *args, **kwargs):
-            callback('foobar')
-            return None
-
-        load_sync_patch.side_effect = cb
-
+    async def test_should_use_http_loader(self, load_sync_patch):
         conf = Config(TC_AWS_ENABLE_HTTP_LOADER=True)
-        s3_loader.load(Context(config=conf), 'http://foo.bar')
+        await s3_loader.load(Context(config=conf), 'http://foo.bar')
         self.assertTrue(load_sync_patch.called)
 
-    @patch('thumbor.loaders.http_loader.load_sync')
+    @patch('thumbor.loaders.http_loader.load')
     @gen_test
-    def test_should_not_use_http_loader_if_not_prefixed_with_scheme(self, load_sync_patch):
+    async def test_should_not_use_http_loader_if_not_prefixed_with_scheme(self, load_sync_patch):
         conf = Config(TC_AWS_ENABLE_HTTP_LOADER=True)
-        yield s3_loader.load(Context(config=conf), 'foo/bar')
+        await s3_loader.load(Context(config=conf), 'foo/bar')
         self.assertFalse(load_sync_patch.called)
-
-    def test_datafunc_loader(self):
-        def callback(*args, **kwargs):
-            pass
-
-        file_key = {
-            'Error': 'Error',
-            'ResponseMetadata': {
-                'HTTPStatusCode': 502
-            }
-        }
-
-        self.call_count = 0
-
-        def get(key, callback=None):
-            self.call_count += 1
-            callback(file_key)
-
-        mock_bucket_loader = MagicMock()
-        mock_bucket_loader.get = get
-
-        func = s3_loader.HandleDataFunc.as_func(
-            '/'.join([s3_bucket, IMAGE_PATH]),
-            callback=callback,
-            bucket_loader=mock_bucket_loader,
-            max_retry=3
-        )
-
-        func(file_key)
-        self.assertEqual(self.call_count, 3)

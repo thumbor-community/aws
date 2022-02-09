@@ -3,110 +3,139 @@
 # Copyright (c) 2015, thumbor-community
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
+from urllib.parse import unquote
 
 import thumbor.loaders.http_loader as http_loader
+from botocore.exceptions import ClientError
 from thumbor.utils import logger
 from thumbor.loaders import LoaderResult
 
-from tornado.concurrent import return_future
-
-from . import *
 from ..aws.bucket import Bucket
 
-def validate(context, url, normalize_url_func=http_loader._normalize_url):
-    return _validate(context, url, normalize_url_func)
 
-@return_future
-def load(context, url, callback):
+async def load(context, url):
     """
     Loads image
     :param Context context: Thumbor's context
     :param string url: Path to load
-    :param callable callback: Callback method once done
     """
     if _use_http_loader(context, url):
-        http_loader.load_sync(context, url, callback, normalize_url_func=http_loader._normalize_url)
-        return
+        return await http_loader.load(context, url)
 
     bucket, key = _get_bucket_and_key(context, url)
 
     if not _validate_bucket(context, bucket):
         result = LoaderResult(successful=False,
                               error=LoaderResult.ERROR_NOT_FOUND)
-        callback(result)
-        return
+        return result
 
-    loader = Bucket(bucket, context.config.get('TC_AWS_REGION'), context.config.get('TC_AWS_ENDPOINT'))
-    handle_data = HandleDataFunc.as_func(key,
-                                         callback=callback,
-                                         bucket_loader=loader,
-                                         max_retry=context.config.get('TC_AWS_MAX_RETRY'))
+    loader = Bucket(
+        bucket,
+        context.config.get('TC_AWS_REGION'),
+        context.config.get('TC_AWS_ENDPOINT'),
+        context.config.get('TC_AWS_MAX_RETRY')
+    )
 
-    loader.get(key, callback=handle_data)
+    result = LoaderResult()
+
+    try:
+        file_key = await loader.get(key)
+    except ClientError as err:
+        logger.error(
+            "ERROR retrieving image from S3 {0}: {1}".
+                format(key, str(err.response)))
+
+        # If we got here, there was a failure.
+        # We will return 404 if S3 returned a 404, otherwise 502.
+        result.successful = False
+
+        if not err.response:
+            result.error = LoaderResult.ERROR_UPSTREAM
+            return result
+
+        status_code = err.response.get('ResponseMetadata', {}).get('HTTPStatusCode')
+
+        if status_code == 404:
+            result.error = LoaderResult.ERROR_NOT_FOUND
+            return result
+
+        result.error = LoaderResult.ERROR_UPSTREAM
+        return result
+
+    result.successful = True
+    result.buffer = await file_key['Body'].read()
+
+    result.metadata.update(
+        size=file_key['ContentLength'],
+        updated_at=file_key['LastModified'],
+    )
+
+    return result
 
 
-class HandleDataFunc(object):
+def _get_bucket_and_key(context, url):
+    """
+    Returns bucket and key from url
+    :param Context context: Thumbor's context
+    :param string url: The URL to parse
+    :return: A tuple with the bucket and the key detected
+    :rtype: tuple
+    """
+    url = unquote(url)
 
-    def __init__(self, key, callback=None,
-                 bucket_loader=None, max_retry=0):
-        self.key = key
-        self.bucket_loader = bucket_loader
-        self.callback = callback
-        self.max_retry = max_retry
-        self.retries_counter = 0
+    bucket = context.config.get('TC_AWS_LOADER_BUCKET')
+    if not bucket:
+        bucket = _get_bucket(url)
+        url = '/'.join(url.lstrip('/').split('/')[1:])
 
-    @classmethod
-    def as_func(cls, *init_args, **init_kwargs):
-        """
-            Method to transform this class to a callback function
-            that will use for getObject from s3
-        """
+    key = _get_key(url, context)
 
-        def handle_data(file_key):
-            instance = cls(*init_args, **init_kwargs)
-            instance.dispatch(file_key)
+    return bucket, key
 
-        handle_data.init_args = init_args
-        handle_data.init_kwargs = init_kwargs
 
-        return handle_data
+def _get_bucket(url):
+    """
+    Retrieves the bucket based on the URL
+    :param string url: URL to parse
+    :return: bucket name
+    :rtype: string
+    """
+    url_by_piece = url.lstrip("/").split("/")
 
-    def __increment_retry_counter(self):
-        self.retries_counter = self.retries_counter + 1
+    return url_by_piece[0]
 
-    def dispatch(self, file_key):
-        """ Callback method for getObject from s3 """
-        if not file_key or 'Error' in file_key or 'Body' not in file_key:
 
-            logger.error(
-                "ERROR retrieving image from S3 {0}: {1}".
-                format(self.key, str(file_key)))
+def _get_key(path, context):
+    """
+    Retrieves key from path
+    :param string path: Path to analyze
+    :param Context context: Thumbor's context
+    :return: Extracted key
+    :rtype: string
+    """
+    root_path = context.config.get('TC_AWS_LOADER_ROOT_PATH')
+    return '/'.join([root_path, path]) if root_path is not '' else path
 
-            # If we got here, there was a failure.
-            # We will return 404 if S3 returned a 404, otherwise 502.
-            result = LoaderResult()
-            result.successful = False
 
-            if not file_key:
-                result.error = LoaderResult.ERROR_UPSTREAM
-                self.callback(result)
-                return
+def _validate_bucket(context, bucket):
+    """
+    Checks that bucket is allowed
+    :param Context context: Thumbor's context
+    :param string bucket: Bucket name
+    :return: Whether bucket is allowed or not
+    :rtype: bool
+    """
+    allowed_buckets = context.config.get('TC_AWS_ALLOWED_BUCKETS', default=None)
+    return not allowed_buckets or bucket in allowed_buckets
 
-            response_metadata = file_key.get('ResponseMetadata', {})
-            status_code = response_metadata.get('HTTPStatusCode')
 
-            if status_code == 404:
-                result.error = LoaderResult.ERROR_NOT_FOUND
-                self.callback(result)
-                return
-
-            if self.retries_counter < self.max_retry:
-                self.__increment_retry_counter()
-                self.bucket_loader.get(self.key,
-                                       callback=self.dispatch)
-            else:
-                result.error = LoaderResult.ERROR_UPSTREAM
-                self.callback(result)
-        else:
-            self.callback(file_key['Body'].read())
-
+def _use_http_loader(context, url):
+    """
+    Should we use HTTP Loader with given path? Based on configuration as well.
+    :param Context context: Thumbor's context
+    :param string url: URL to analyze
+    :return: Whether we should use HTTP Loader or not
+    :rtype: bool
+    """
+    enable_http_loader = context.config.get('TC_AWS_ENABLE_HTTP_LOADER', default=False)
+    return enable_http_loader and url.startswith('http')
