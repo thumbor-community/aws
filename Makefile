@@ -23,7 +23,7 @@ docs: setup_docs build_docs
 	python -mwebbrowser file:///`pwd`/docs/_build/html/index.html
 
 test: setup
-	nosetests
+	pytest
 
 publish: setup_publish
 	python setup.py sdist

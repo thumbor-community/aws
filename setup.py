@@ -65,7 +65,7 @@ setup(
             'coverage',
             'moto[server]',
             'mock',
-            'nose',
+            'pytest',
         ],
     },
 )

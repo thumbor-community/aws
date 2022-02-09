@@ -8,9 +8,9 @@
 
 from datetime import datetime, timedelta
 from unittest import TestCase
+from pytest import raises
 
 from dateutil.tz import tzutc
-from nose.tools import assert_raises_regexp
 from thumbor.config import Config
 from thumbor.context import Context, RequestParameters
 from tornado.testing import gen_test
@@ -101,8 +101,7 @@ class CryptoS3StorageTestCase(S3MockedAsyncTestCase):
 
         await storage.put(IMAGE_URL % '9999', IMAGE_BYTES)
 
-        with assert_raises_regexp(RuntimeError,
-                                  "STORES_CRYPTO_KEY_FOR_EACH_IMAGE can't be True if no SECURITY_KEY specified"):
+        with raises(RuntimeError, match='STORES_CRYPTO_KEY_FOR_EACH_IMAGE can\'t be True if no SECURITY_KEY specified'):
             await storage.put_crypto(IMAGE_URL % '9999')
 
     @gen_test
