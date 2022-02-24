@@ -109,7 +109,8 @@ class Storage(AwsStorage, BaseStorage):
             logger.warn("[STORAGE] s3 key not found at %s" % crypto_path)
             return None
 
-        file_key = await file_key['Body'].read()
+        async with file_key['Body'] as stream:
+            file_key = await stream.read()
 
         return file_key.decode('utf-8')
 
@@ -129,7 +130,8 @@ class Storage(AwsStorage, BaseStorage):
         if not file_key or self.is_expired(file_key) or 'Body' not in file_key:
             return None
 
-        return loads(await file_key['Body'].read())
+        async with file_key['Body'] as stream:
+            return loads(await stream.read())
 
     async def get(self, path):
         """
@@ -142,7 +144,8 @@ class Storage(AwsStorage, BaseStorage):
         except BotoCoreError:
             return None
 
-        return await file['Body'].read()
+        async with file['Body'] as stream:
+            return await stream.read()
 
     async def exists(self, path):
         """
@@ -150,15 +153,7 @@ class Storage(AwsStorage, BaseStorage):
         :param string path: Path to check
         """
         file_abspath = self._normalize_path(path)
-
-        try:
-            await self.storage.get(file_abspath)
-        except ClientError as err:
-            if err.response['Error']['Code'] == 'NoSuchKey':
-                return False
-            raise
-
-        return True
+        return await self.storage.exists(file_abspath)
 
     async def remove(self, path):
         """

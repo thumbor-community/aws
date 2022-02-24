@@ -11,6 +11,7 @@ from thumbor.engines import BaseEngine
 
 
 class Bucket(object):
+    _client = None
     _instances = {}
 
     @staticmethod
@@ -35,8 +36,6 @@ class Bucket(object):
         """
         self._bucket = bucket
 
-        session = aiobotocore.get_session()
-
         config = None
         if max_retry is not None:
             config = Config(
@@ -45,12 +44,27 @@ class Bucket(object):
                 )
             )
 
-        self._client = session.create_client(
-            's3',
-            region_name=region,
-            endpoint_url=endpoint,
-            config=config
-        )
+        if self._client is None:
+            self._client = aiobotocore.get_session().create_client(
+                's3',
+                region_name=region,
+                endpoint_url=endpoint,
+                config=config
+            )
+
+    async def exists(self, path):
+        """
+        Checks if an object exists at a given path
+        :param string path: Path or 'key' to retrieve AWS object
+        """
+        try:
+            await self._client.head_object(
+                Bucket=self._bucket,
+                Key=self._clean_key(path),
+            )
+        except Exception:
+            return False
+        return True
 
     async def get(self, path):
         """

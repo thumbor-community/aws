@@ -60,7 +60,8 @@ class Storage(AwsStorage, BaseStorage):
             return None
 
         result = ResultStorageResult()
-        result.buffer = await key['Body'].read()
+        async with key['Body'] as stream:
+            result.buffer = await stream.read()
         result.successful = True
 
         result.metadata = {

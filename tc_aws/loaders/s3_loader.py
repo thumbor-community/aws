@@ -63,7 +63,8 @@ async def load(context, url):
         return result
 
     result.successful = True
-    result.buffer = await file_key['Body'].read()
+    async with file_key['Body'] as stream:
+        result.buffer = await stream.read()
 
     result.metadata.update(
         size=file_key['ContentLength'],
