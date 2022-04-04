@@ -56,8 +56,8 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         """
         try:
-            async with aiobotocore.session.get_session().create_client('s3', region_name=self.region_name,
-                                                                       endpoint_url=self.endpoint_url) as s3_client:
+            async with self.session.create_client('s3', region_name=self.region_name,
+                                                  endpoint_url=self.endpoint_url) as s3_client:
                 await s3_client.head_object(
                     Bucket=self._bucket,
                     Key=self._clean_key(path),
@@ -89,8 +89,8 @@ class Bucket(object):
         :param string method: Method for requested URL
         :param int expiry: URL validity time
         """
-        async with aiobotocore.session.get_session().create_client('s3', region_name=self.region_name,
-                                                                   endpoint_url=self.endpoint_url) as s3_client:
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
             url = await s3_client.generate_presigned_url(
                 ClientMethod='get_object',
                 Params={
@@ -129,8 +129,8 @@ class Bucket(object):
         if metadata is not None:
             args['Metadata'] = metadata
 
-        async with aiobotocore.session.get_session().create_client('s3', region_name=self.region_name,
-                                                                   endpoint_url=self.endpoint_url) as s3_client:
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
             return await s3_client.put_object(**args)
 
     async def delete(self, path):
@@ -138,8 +138,8 @@ class Bucket(object):
         Deletes key at given path
         :param string path: Path or 'key' to delete
         """
-        async with aiobotocore.session.get_session().create_client('s3', region_name=self.region_name,
-                                                                   endpoint_url=self.endpoint_url) as s3_client:
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
             return await s3_client.delete_object(
                 Bucket=self._bucket,
                 Key=self._clean_key(path),
