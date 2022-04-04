@@ -3,6 +3,7 @@
 # Copyright (c) 2015, thumbor-community
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
+import io
 
 import aiobotocore.session
 from botocore.client import Config
@@ -26,6 +27,7 @@ class Bucket(object):
     """
     This handles all communication with AWS API
     """
+
     def __init__(self, bucket, region, endpoint, max_retry=None):
         """
         Constructor
@@ -46,6 +48,7 @@ class Bucket(object):
 
         self.region_name = region
         self.endpoint_url = endpoint
+        self.session = aiobotocore.session.get_session()
 
     async def exists(self, path):
         """
@@ -68,12 +71,16 @@ class Bucket(object):
         Returns object at given path
         :param string path: Path or 'key' to retrieve AWS object
         """
-        async with aiobotocore.session.get_session().create_client('s3', region_name=self.region_name,
-                                                                   endpoint_url=self.endpoint_url) as s3_client:
-            return await s3_client.get_object(
-                    Bucket=self._bucket,
-                    Key=self._clean_key(path),
-                )
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
+            response = await s3_client.get_object(Bucket=self._bucket, Key=self._clean_key(path))
+            # TODO: Verify if it is possible to restore the original behavior were response['Body'] was a coroutine.
+            # Thumbor was getting stuck when response['Body'].read() was being called by s3_loader.load.
+            # To Avoid this, we read the Body content and expose it as a BytesIO to maintain the interface.
+            content = await response['Body'].read()
+            response['Body'] = io.BytesIO(content)
+
+        return response
 
     async def get_url(self, path, method='GET', expiry=3600):
         """
