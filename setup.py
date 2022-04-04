@@ -58,7 +58,7 @@ setup(
     install_requires=[
         'python-dateutil',
         'thumbor>=7.0.0a2,<8',
-        'aiobotocore==0.12.0',
+        'aiobotocore==2.2.0',
     ],
     extras_require={
         'tests': [
@@ -66,6 +66,7 @@ setup(
             'moto[server]',
             'mock',
             'pytest',
+            'pytest-asyncio'
         ],
     },
 )
