@@ -53,10 +53,12 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         """
         try:
-            await self._client.head_object(
-                Bucket=self._bucket,
-                Key=self._clean_key(path),
-            )
+            async with aiobotocore.session.get_session().create_client('s3', region_name=self.region_name,
+                                                                       endpoint_url=self.endpoint_url) as s3_client:
+                await s3_client.head_object(
+                    Bucket=self._bucket,
+                    Key=self._clean_key(path),
+                )
         except Exception:
             return False
         return True
