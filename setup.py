@@ -56,16 +56,17 @@ setup(
     ],
     keywords='thumbor aws',
     install_requires=[
-        'python-dateutil',
+        'python-dateutil>=2.8',
         'thumbor>=7.0.0a2,<8',
         'aiobotocore==0.12.0',
+        'boto3>=1.9,<1.13',
     ],
     extras_require={
         'tests': [
-            'coverage',
-            'moto[server]',
-            'mock',
-            'pytest',
+            'coverage>=6.5',
+            'moto[server]>=4.0',
+            'mock>=4.0',
+            'pytest>=7.2',
         ],
     },
 )
