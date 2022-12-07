@@ -58,8 +58,9 @@ setup(
     install_requires=[
         'python-dateutil>=2.8',
         'thumbor>=7.0.0a2,<8',
-        'aiobotocore==0.12.0',
-        'boto3>=1.9,<1.13',
+        'aiobotocore==2.2.0',
+        'botocore>=1.24.21,<1.24.22',
+        'boto3>=1.21.21,<1.21.22'
     ],
     extras_require={
         'tests': [
@@ -67,6 +68,7 @@ setup(
             'moto[server]>=4.0',
             'mock>=4.0',
             'pytest>=7.2',
+            'pytest-asyncio>=0.20.2'
         ],
     },
 )

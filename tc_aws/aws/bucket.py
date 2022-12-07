@@ -3,8 +3,9 @@
 # Copyright (c) 2015, thumbor-community
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
+import io
 
-import aiobotocore
+import aiobotocore.session
 from botocore.client import Config
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
@@ -26,6 +27,7 @@ class Bucket(object):
     """
     This handles all communication with AWS API
     """
+
     def __init__(self, bucket, region, endpoint, max_retry=None):
         """
         Constructor
@@ -44,13 +46,9 @@ class Bucket(object):
                 )
             )
 
-        if self._client is None:
-            self._client = aiobotocore.get_session().create_client(
-                's3',
-                region_name=region,
-                endpoint_url=endpoint,
-                config=config
-            )
+        self.region_name = region
+        self.endpoint_url = endpoint
+        self.session = aiobotocore.session.get_session()
 
     async def exists(self, path):
         """
@@ -58,10 +56,12 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         """
         try:
-            await self._client.head_object(
-                Bucket=self._bucket,
-                Key=self._clean_key(path),
-            )
+            async with self.session.create_client('s3', region_name=self.region_name,
+                                                  endpoint_url=self.endpoint_url) as s3_client:
+                await s3_client.head_object(
+                    Bucket=self._bucket,
+                    Key=self._clean_key(path),
+                )
         except Exception:
             return False
         return True
@@ -71,11 +71,16 @@ class Bucket(object):
         Returns object at given path
         :param string path: Path or 'key' to retrieve AWS object
         """
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
+            response = await s3_client.get_object(Bucket=self._bucket, Key=self._clean_key(path))
+            # TODO: Verify if it is possible to restore the original behavior were response['Body'] was a coroutine.
+            # Thumbor was getting stuck when response['Body'].read() was being called by s3_loader.load.
+            # To Avoid this, we read the Body content and expose it as a BytesIO to maintain the interface.
+            content = await response['Body'].read()
+            response['Body'] = io.BytesIO(content)
 
-        return await self._client.get_object(
-            Bucket=self._bucket,
-            Key=self._clean_key(path),
-        )
+        return response
 
     async def get_url(self, path, method='GET', expiry=3600):
         """
@@ -84,18 +89,19 @@ class Bucket(object):
         :param string method: Method for requested URL
         :param int expiry: URL validity time
         """
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
+            url = await s3_client.generate_presigned_url(
+                ClientMethod='get_object',
+                Params={
+                    'Bucket': self._bucket,
+                    'Key': self._clean_key(path),
+                },
+                ExpiresIn=expiry,
+                HttpMethod=method,
+            )
 
-        url = await self._client.generate_presigned_url(
-            ClientMethod='get_object',
-            Params={
-                'Bucket': self._bucket,
-                'Key': self._clean_key(path),
-            },
-            ExpiresIn=expiry,
-            HttpMethod=method,
-        )
-
-        return url
+            return url
 
     async def put(self, path, data, metadata=None, reduced_redundancy=False, encrypt_key=False):
         """
@@ -123,17 +129,21 @@ class Bucket(object):
         if metadata is not None:
             args['Metadata'] = metadata
 
-        return await self._client.put_object(**args)
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
+            return await s3_client.put_object(**args)
 
     async def delete(self, path):
         """
         Deletes key at given path
         :param string path: Path or 'key' to delete
         """
-        return await self._client.delete_object(
-            Bucket=self._bucket,
-            Key=self._clean_key(path),
-        )
+        async with self.session.create_client('s3', region_name=self.region_name,
+                                              endpoint_url=self.endpoint_url) as s3_client:
+            return await s3_client.delete_object(
+                Bucket=self._bucket,
+                Key=self._clean_key(path),
+            )
 
     def _clean_key(self, path):
         logger.debug('Cleaning key: {path!r}'.format(path=path))
