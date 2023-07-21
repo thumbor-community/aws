@@ -106,7 +106,7 @@ class Storage(AwsStorage, BaseStorage):
         try:
             file_key = await self.storage.get(crypto_path)
         except ClientError as err:
-            logger.warn("[STORAGE] s3 key not found at %s" % crypto_path)
+            logger.warning("[STORAGE] s3 key not found at %s" % crypto_path)
             return None
 
         async with file_key['Body'] as stream:
@@ -143,6 +143,13 @@ class Storage(AwsStorage, BaseStorage):
             file = await super(Storage, self).get(path)
         except BotoCoreError:
             return None
+        except ClientError as e:
+            # in case there is no key found we need to return None,
+            # so thumbor will try to cache the not existing image
+            if e.__class__.__name__ == 'NoSuchKey':
+                return None
+            else:
+                raise e
 
         async with file['Body'] as stream:
             return await stream.read()
