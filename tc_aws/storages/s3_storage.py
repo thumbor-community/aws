@@ -141,7 +141,7 @@ class Storage(AwsStorage, BaseStorage):
 
         try:
             file = await super(Storage, self).get(path)
-        except BotoCoreError:
+        except ClientError:
             return None
         except ClientError as e:
             # in case there is no key found we need to return None,
