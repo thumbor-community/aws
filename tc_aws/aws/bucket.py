@@ -33,6 +33,10 @@ class Bucket(object):
         :param string endpoint: A specific endpoint to use
         :return: The created bucket
         """
+        # Only initialize once due to singleton pattern
+        if hasattr(self, '_initialized'):
+            return
+            
         self._bucket = bucket
         self._region = region
         self._endpoint = endpoint
@@ -46,15 +50,28 @@ class Bucket(object):
             )
         
         self._session = aiobotocore.session.get_session()
+        self._client = None
+        self._client_context = None
+        self._initialized = True
 
-    def _create_client(self):
-        """Create and return a client context manager"""
-        return self._session.create_client(
-            's3',
-            region_name=self._region,
-            endpoint_url=self._endpoint,
-            config=self._config
-        )
+    async def _get_client(self):
+        """Get or create the client"""
+        if self._client is None:
+            self._client_context = self._session.create_client(
+                's3',
+                region_name=self._region,
+                endpoint_url=self._endpoint,
+                config=self._config
+            )
+            self._client = await self._client_context.__aenter__()
+        return self._client
+
+    async def _close_client(self):
+        """Close the client"""
+        if self._client is not None and self._client_context is not None:
+            await self._client_context.__aexit__(None, None, None)
+            self._client = None
+            self._client_context = None
 
     async def exists(self, path):
         """
@@ -62,11 +79,11 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         """
         try:
-            async with self._create_client() as client:
-                await client.head_object(
-                    Bucket=self._bucket,
-                    Key=self._clean_key(path),
-                )
+            client = await self._get_client()
+            await client.head_object(
+                Bucket=self._bucket,
+                Key=self._clean_key(path),
+            )
         except Exception:
             return False
         return True
@@ -76,11 +93,11 @@ class Bucket(object):
         Returns object at given path
         :param string path: Path or 'key' to retrieve AWS object
         """
-        async with self._create_client() as client:
-            return await client.get_object(
-                Bucket=self._bucket,
-                Key=self._clean_key(path),
-            )
+        client = await self._get_client()
+        return await client.get_object(
+            Bucket=self._bucket,
+            Key=self._clean_key(path),
+        )
 
     async def get_url(self, path, method='GET', expiry=3600):
         """
@@ -89,18 +106,18 @@ class Bucket(object):
         :param string method: Method for requested URL
         :param int expiry: URL validity time
         """
-        async with self._create_client() as client:
-            url = await client.generate_presigned_url(
-                ClientMethod='get_object',
-                Params={
-                    'Bucket': self._bucket,
-                    'Key': self._clean_key(path),
-                },
-                ExpiresIn=expiry,
-                HttpMethod=method,
-            )
+        client = await self._get_client()
+        url = await client.generate_presigned_url(
+            ClientMethod='get_object',
+            Params={
+                'Bucket': self._bucket,
+                'Key': self._clean_key(path),
+            },
+            ExpiresIn=expiry,
+            HttpMethod=method,
+        )
 
-            return url
+        return url
 
     async def put(self, path, data, metadata=None, reduced_redundancy=False, encrypt_key=False):
         """
@@ -128,19 +145,26 @@ class Bucket(object):
         if metadata is not None:
             args['Metadata'] = metadata
 
-        async with self._create_client() as client:
-            return await client.put_object(**args)
+        client = await self._get_client()
+        return await client.put_object(**args)
 
     async def delete(self, path):
         """
         Deletes key at given path
         :param string path: Path or 'key' to delete
         """
-        async with self._create_client() as client:
-            return await client.delete_object(
-                Bucket=self._bucket,
-                Key=self._clean_key(path),
-            )
+        client = await self._get_client()
+        return await client.delete_object(
+            Bucket=self._bucket,
+            Key=self._clean_key(path),
+        )
+
+    @classmethod
+    async def cleanup_all(cls):
+        """Clean up all bucket instances and their clients"""
+        for instance in cls._instances.values():
+            await instance._close_client()
+        cls._instances.clear()
 
     def _clean_key(self, path):
         logger.debug('Cleaning key: {path!r}'.format(path=path))
