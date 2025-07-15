@@ -4,14 +4,13 @@
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
 
-import aiobotocore
+import aiobotocore.session
 from botocore.client import Config
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
 
 
 class Bucket(object):
-    _client = None
     _instances = {}
 
     @staticmethod
@@ -35,22 +34,27 @@ class Bucket(object):
         :return: The created bucket
         """
         self._bucket = bucket
-
-        config = None
+        self._region = region
+        self._endpoint = endpoint
+        
+        self._config = None
         if max_retry is not None:
-            config = Config(
+            self._config = Config(
                 retries=dict(
                     max_attempts=max_retry
                 )
             )
+        
+        self._session = aiobotocore.session.get_session()
 
-        if self._client is None:
-            self._client = aiobotocore.get_session().create_client(
-                's3',
-                region_name=region,
-                endpoint_url=endpoint,
-                config=config
-            )
+    def _create_client(self):
+        """Create and return a client context manager"""
+        return self._session.create_client(
+            's3',
+            region_name=self._region,
+            endpoint_url=self._endpoint,
+            config=self._config
+        )
 
     async def exists(self, path):
         """
@@ -58,10 +62,11 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         """
         try:
-            await self._client.head_object(
-                Bucket=self._bucket,
-                Key=self._clean_key(path),
-            )
+            async with self._create_client() as client:
+                await client.head_object(
+                    Bucket=self._bucket,
+                    Key=self._clean_key(path),
+                )
         except Exception:
             return False
         return True
@@ -71,11 +76,11 @@ class Bucket(object):
         Returns object at given path
         :param string path: Path or 'key' to retrieve AWS object
         """
-
-        return await self._client.get_object(
-            Bucket=self._bucket,
-            Key=self._clean_key(path),
-        )
+        async with self._create_client() as client:
+            return await client.get_object(
+                Bucket=self._bucket,
+                Key=self._clean_key(path),
+            )
 
     async def get_url(self, path, method='GET', expiry=3600):
         """
@@ -84,18 +89,18 @@ class Bucket(object):
         :param string method: Method for requested URL
         :param int expiry: URL validity time
         """
+        async with self._create_client() as client:
+            url = await client.generate_presigned_url(
+                ClientMethod='get_object',
+                Params={
+                    'Bucket': self._bucket,
+                    'Key': self._clean_key(path),
+                },
+                ExpiresIn=expiry,
+                HttpMethod=method,
+            )
 
-        url = await self._client.generate_presigned_url(
-            ClientMethod='get_object',
-            Params={
-                'Bucket': self._bucket,
-                'Key': self._clean_key(path),
-            },
-            ExpiresIn=expiry,
-            HttpMethod=method,
-        )
-
-        return url
+            return url
 
     async def put(self, path, data, metadata=None, reduced_redundancy=False, encrypt_key=False):
         """
@@ -123,17 +128,19 @@ class Bucket(object):
         if metadata is not None:
             args['Metadata'] = metadata
 
-        return await self._client.put_object(**args)
+        async with self._create_client() as client:
+            return await client.put_object(**args)
 
     async def delete(self, path):
         """
         Deletes key at given path
         :param string path: Path or 'key' to delete
         """
-        return await self._client.delete_object(
-            Bucket=self._bucket,
-            Key=self._clean_key(path),
-        )
+        async with self._create_client() as client:
+            return await client.delete_object(
+                Bucket=self._bucket,
+                Key=self._clean_key(path),
+            )
 
     def _clean_key(self, path):
         logger.debug('Cleaning key: {path!r}'.format(path=path))
