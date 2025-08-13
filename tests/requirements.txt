@@ -1,0 +1,7 @@
+# Pinned test-only dependencies for faster, reproducible installs
+coverage==6.5.0
+moto[server]==1.3.16
+mock==4.0.3
+pytest==7.2.2
+requests==2.31.0
+
