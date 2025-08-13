@@ -14,9 +14,9 @@ SETUP_STAMP := $(DEPS_DIR)/tests.ok
 $(DEPS_DIR):
 	mkdir -p $(DEPS_DIR)
 
-$(SETUP_STAMP): setup.py version.txt tests/requirements.txt | $(DEPS_DIR)
-	pip install -e .
-	pip install -r tests/requirements.txt
+$(SETUP_STAMP): setup.py version.txt tests/requirements.txt tests/constraints.txt | $(DEPS_DIR)
+	pip install -e . -c tests/constraints.txt
+	pip install -r tests/requirements.txt -c tests/constraints.txt
 	touch $(SETUP_STAMP)
 
 setup: $(SETUP_STAMP)

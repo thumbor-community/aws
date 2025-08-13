@@ -7,14 +7,14 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}
+            - v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
             - v1-pip-cache-{{ arch }}-{{ .Branch }}-
             - v1-pip-cache-
       - run:
           name: Install dependencies
           command: make setup
       - save_cache:
-          key: v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}
+          key: v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
           paths:
             - ~/.cache/pip
       - run:
@@ -27,7 +27,7 @@ jobs:
       - checkout
       - restore_cache:
           keys:
-            - v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}
+            - v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
             - v1-pip-cache-{{ arch }}-{{ .Branch }}-
             - v1-pip-cache-
       - run: |
@@ -42,7 +42,7 @@ jobs:
       - run: cat ~/.pypirc
       - run: make install
       - save_cache:
-          key: v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}
+          key: v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
           paths:
             - ~/.cache/pip
       - run: make publish
