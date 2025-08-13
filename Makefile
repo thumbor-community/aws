@@ -15,8 +15,8 @@ $(DEPS_DIR):
 	mkdir -p $(DEPS_DIR)
 
 $(SETUP_STAMP): setup.py version.txt tests/requirements.txt | $(DEPS_DIR)
-	pip install -e . --quiet
-	pip install -r tests/requirements.txt --quiet
+	pip install -e .
+	pip install -r tests/requirements.txt
 	touch $(SETUP_STAMP)
 
 setup: $(SETUP_STAMP)
