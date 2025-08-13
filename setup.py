@@ -57,7 +57,7 @@ setup(
     keywords='thumbor aws',
     install_requires=[
         'python-dateutil>=2.8,<2.9',
-        'thumbor>=7.0.0a2,<7.1',
+        'thumbor>=7.0.0a2,<8',
         'aiobotocore==0.12.0',
         'boto3>=1.12,<1.13',
     ],

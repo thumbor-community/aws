@@ -14,9 +14,12 @@ SETUP_STAMP := $(DEPS_DIR)/tests.ok
 $(DEPS_DIR):
 	mkdir -p $(DEPS_DIR)
 
+
+
 $(SETUP_STAMP): setup.py version.txt tests/requirements.txt tests/constraints.txt | $(DEPS_DIR)
-	pip install -e . -c tests/constraints.txt
-	pip install -r tests/requirements.txt -c tests/constraints.txt
+	python -m pip install --upgrade pip setuptools wheel
+	SETUPTOOLS_USE_DISTUTILS=local pip install -e . -c tests/constraints.txt
+	SETUPTOOLS_USE_DISTUTILS=local pip install -r tests/requirements.txt -c tests/constraints.txt
 	touch $(SETUP_STAMP)
 
 setup: $(SETUP_STAMP)
