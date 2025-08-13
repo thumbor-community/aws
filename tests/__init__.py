@@ -44,9 +44,9 @@ def start_service(host, port):
 
         try:
             # we need to bypass the proxies due to monkeypatches
-            requests.get(url, timeout=0.5)
+            requests.get(url, timeout=1.5)
             break
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
             time.sleep(0.5)
     else:
         stop_process(process)
