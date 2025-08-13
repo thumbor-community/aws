@@ -5,12 +5,31 @@ jobs:
       - image: bladrak/thumbor-dev-py3:latest
     steps:
       - checkout
-      - run: make test
+      - restore_cache:
+          keys:
+            - v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
+            - v1-pip-cache-{{ arch }}-{{ .Branch }}-
+            - v1-pip-cache-
+      - run:
+          name: Install dependencies
+          command: make setup
+      - save_cache:
+          key: v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
+          paths:
+            - ~/.cache/pip
+      - run:
+          name: Run tests
+          command: make test
   deploy:
     docker:
       - image: bladrak/thumbor-dev-py3:latest
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
+            - v1-pip-cache-{{ arch }}-{{ .Branch }}-
+            - v1-pip-cache-
       - run: |
           echo -e "[distutils]" >> ~/.pypirc
           echo -e "index-servers =" >> ~/.pypirc
@@ -22,6 +41,10 @@ jobs:
           echo -e "password:$PYPI_PASSWORD" >> ~/.pypirc
       - run: cat ~/.pypirc
       - run: make install
+      - save_cache:
+          key: v1-pip-cache-{{ arch }}-{{ .Branch }}-{{ checksum "setup.py" }}-{{ checksum "tests/requirements.txt" }}-{{ checksum "tests/constraints.txt" }}
+          paths:
+            - ~/.cache/pip
       - run: make publish
 
 workflows:

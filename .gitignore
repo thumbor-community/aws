@@ -4,3 +4,4 @@ build
 *.deb
 /dist
 /docs/_build*
+.deps
