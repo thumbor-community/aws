@@ -52,6 +52,15 @@ class S3StorageTestCase(S3MockedAsyncTestCase):
         self.assertFalse(topic)
 
     @gen_test
+    async def test_getting_inexistante_image_return_none(self):
+        config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket)
+        storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
+
+        topic = await storage.get(IMAGE_URL % '9999')
+
+        self.assertIsNone(topic)
+
+    @gen_test
     async def test_can_remove_instance(self):
         config = Config(TC_AWS_STORAGE_BUCKET=s3_bucket,TC_AWS_STORAGE_ROOT_PATH='nana')
         storage = Storage(Context(config=config, server=get_server('ACME-SEC')))
