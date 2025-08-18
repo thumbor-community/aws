@@ -37,8 +37,8 @@ jobs:
           echo -e "" >> ~/.pypirc
 
           echo -e "[pypi]" >> ~/.pypirc
-          echo -e "username:$PYPI_USERNAME" >> ~/.pypirc
-          echo -e "password:$PYPI_PASSWORD" >> ~/.pypirc
+          echo -e "username = __token__" >> ~/.pypirc
+          echo -e "password = $PYPI_TCAWS_PUBLISH_TOKEN" >> ~/.pypirc
       - run: cat ~/.pypirc
       - run: make install
       - save_cache:
