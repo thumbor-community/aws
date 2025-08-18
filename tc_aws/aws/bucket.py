@@ -4,14 +4,13 @@
 # Use of this source code is governed by the MIT license that can be
 # found in the LICENSE file.
 
-import aiobotocore
+import aiobotocore.session
 from botocore.client import Config
 from thumbor.utils import logger
 from thumbor.engines import BaseEngine
 
 
 class Bucket(object):
-    _client = None
     _instances = {}
 
     @staticmethod
@@ -34,23 +33,45 @@ class Bucket(object):
         :param string endpoint: A specific endpoint to use
         :return: The created bucket
         """
+        # Only initialize once due to singleton pattern
+        if hasattr(self, '_initialized'):
+            return
+            
         self._bucket = bucket
-
-        config = None
+        self._region = region
+        self._endpoint = endpoint
+        
+        self._config = None
         if max_retry is not None:
-            config = Config(
+            self._config = Config(
                 retries=dict(
                     max_attempts=max_retry
                 )
             )
+        
+        self._session = aiobotocore.session.get_session()
+        self._client = None
+        self._client_context = None
+        self._initialized = True
 
+    async def _get_client(self):
+        """Get or create the client"""
         if self._client is None:
-            self._client = aiobotocore.get_session().create_client(
+            self._client_context = self._session.create_client(
                 's3',
-                region_name=region,
-                endpoint_url=endpoint,
-                config=config
+                region_name=self._region,
+                endpoint_url=self._endpoint,
+                config=self._config
             )
+            self._client = await self._client_context.__aenter__()
+        return self._client
+
+    async def _close_client(self):
+        """Close the client"""
+        if self._client is not None and self._client_context is not None:
+            await self._client_context.__aexit__(None, None, None)
+            self._client = None
+            self._client_context = None
 
     async def exists(self, path):
         """
@@ -58,7 +79,8 @@ class Bucket(object):
         :param string path: Path or 'key' to retrieve AWS object
         """
         try:
-            await self._client.head_object(
+            client = await self._get_client()
+            await client.head_object(
                 Bucket=self._bucket,
                 Key=self._clean_key(path),
             )
@@ -71,8 +93,8 @@ class Bucket(object):
         Returns object at given path
         :param string path: Path or 'key' to retrieve AWS object
         """
-
-        return await self._client.get_object(
+        client = await self._get_client()
+        return await client.get_object(
             Bucket=self._bucket,
             Key=self._clean_key(path),
         )
@@ -84,8 +106,8 @@ class Bucket(object):
         :param string method: Method for requested URL
         :param int expiry: URL validity time
         """
-
-        url = await self._client.generate_presigned_url(
+        client = await self._get_client()
+        url = await client.generate_presigned_url(
             ClientMethod='get_object',
             Params={
                 'Bucket': self._bucket,
@@ -123,17 +145,26 @@ class Bucket(object):
         if metadata is not None:
             args['Metadata'] = metadata
 
-        return await self._client.put_object(**args)
+        client = await self._get_client()
+        return await client.put_object(**args)
 
     async def delete(self, path):
         """
         Deletes key at given path
         :param string path: Path or 'key' to delete
         """
-        return await self._client.delete_object(
+        client = await self._get_client()
+        return await client.delete_object(
             Bucket=self._bucket,
             Key=self._clean_key(path),
         )
+
+    @classmethod
+    async def cleanup_all(cls):
+        """Clean up all bucket instances and their clients"""
+        for instance in cls._instances.values():
+            await instance._close_client()
+        cls._instances.clear()
 
     def _clean_key(self, path):
         logger.debug('Cleaning key: {path!r}'.format(path=path))
