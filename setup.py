@@ -12,7 +12,7 @@ def version():
 
     # Try to parse tag from CI variable, if set write version.txt file with current version
     if ci_tag is not None:
-        if re.match('\d+(\.\d+)*', ci_tag):
+        if re.match(r'\d+(\.\d+)*', ci_tag):
             with open('version.txt', 'w+') as f:
                 f.write(ci_tag)
             return ci_tag
