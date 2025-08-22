@@ -115,7 +115,7 @@ def _get_key(path, context):
     :rtype: string
     """
     root_path = context.config.get('TC_AWS_LOADER_ROOT_PATH')
-    return '/'.join([root_path, path]) if root_path is not '' else path
+    return '/'.join([root_path, path]) if root_path != '' else path
 
 
 def _validate_bucket(context, bucket):
